@@ -1,0 +1,420 @@
+package com.example.cashnova.ui
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.cashnova.data.CashNovaRepository
+import com.example.cashnova.data.CashNovaUiState
+import com.example.cashnova.data.FinanceTransaction
+import com.example.cashnova.data.SavingGoal
+import com.example.cashnova.data.TransactionType
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+class CashNovaViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val repository =
+        CashNovaRepository(application)
+
+    /*
+     * Data awal berisi profil, onboarding,
+     * saldo pembuka, dan tabungan.
+     */
+    private val _uiState =
+        MutableStateFlow(
+            repository.loadPreferencesState()
+        )
+
+    val uiState: StateFlow<CashNovaUiState> =
+        _uiState.asStateFlow()
+
+    init {
+        observeRoomTransactions()
+    }
+
+    /*
+     * Memulai Room dan mengamati transaksi.
+     */
+    private fun observeRoomTransactions() {
+
+        viewModelScope.launch {
+
+            /*
+             * Memigrasikan transaksi lama atau
+             * memasukkan data demo pada penggunaan pertama.
+             */
+            repository.initializeTransactions()
+
+            /*
+             * Mengamati perubahan tabel transaksi.
+             */
+            repository
+                .observeTransactions()
+                .collectLatest { transactions ->
+
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            transactions = transactions
+                        )
+                    }
+                }
+        }
+    }
+
+    fun completeOnboarding() {
+
+        updatePreferences { currentState ->
+            currentState.copy(
+                onboardingCompleted = true
+            )
+        }
+    }
+
+    fun updateProfileName(
+        name: String
+    ) {
+
+        val cleanedName =
+            name.trim()
+
+        if (cleanedName.isBlank()) {
+            return
+        }
+
+        updatePreferences { currentState ->
+            currentState.copy(
+                profileName = cleanedName
+            )
+        }
+    }
+
+    /*
+     * Menambah transaksi baru ke Room.
+     */
+    fun addTransaction(
+        title: String,
+        subtitle: String,
+        amount: Double,
+        type: TransactionType,
+        category: String
+    ) {
+
+        val cleanedTitle =
+            title.trim()
+
+        if (
+            cleanedTitle.isBlank() ||
+            amount <= 0.0
+        ) {
+            return
+        }
+
+        val transaction =
+            FinanceTransaction(
+                /*
+                 * ID 0 membuat Room menghasilkan
+                 * primary key secara otomatis.
+                 */
+                id = 0L,
+
+                title = cleanedTitle,
+
+                subtitle =
+                    subtitle
+                        .trim()
+                        .ifBlank {
+                            if (
+                                type ==
+                                TransactionType.INCOME
+                            ) {
+                                "Income"
+                            } else {
+                                "Expense"
+                            }
+                        },
+
+                amount = amount,
+
+                type = type,
+
+                category =
+                    category
+                        .trim()
+                        .ifBlank {
+                            "Other"
+                        },
+
+                createdAt =
+                    System.currentTimeMillis()
+            )
+
+        viewModelScope.launch {
+            repository.insertTransaction(
+                transaction
+            )
+        }
+    }
+
+    /*
+     * Memperbarui transaksi Room.
+     *
+     * Fungsi ini akan digunakan oleh
+     * layar edit transaksi pada tahap berikutnya.
+     */
+    fun updateTransaction(
+        transaction: FinanceTransaction
+    ) {
+
+        if (
+            transaction.id <= 0L ||
+            transaction.title.isBlank() ||
+            transaction.amount <= 0.0
+        ) {
+            return
+        }
+
+        viewModelScope.launch {
+            repository.updateTransaction(
+                transaction.copy(
+                    title =
+                        transaction.title.trim(),
+
+                    subtitle =
+                        transaction.subtitle.trim(),
+
+                    category =
+                        transaction.category
+                            .trim()
+                            .ifBlank {
+                                "Other"
+                            }
+                )
+            )
+        }
+    }
+
+    /*
+     * Menghapus transaksi dari Room.
+     */
+    fun deleteTransaction(
+        id: Long
+    ) {
+
+        if (id <= 0L) {
+            return
+        }
+
+        viewModelScope.launch {
+            repository.deleteTransaction(id)
+        }
+    }
+
+    fun addSavingGoal(
+        title: String,
+        targetAmount: Double,
+        initialAmount: Double,
+        daysLeft: Int
+    ) {
+
+        if (
+            title.isBlank() ||
+            targetAmount <= 0.0
+        ) {
+            return
+        }
+
+        val safeInitialAmount =
+            initialAmount.coerceIn(
+                minimumValue = 0.0,
+                maximumValue = targetAmount
+            )
+
+        val newGoal =
+            SavingGoal(
+                id =
+                    System.currentTimeMillis(),
+
+                title =
+                    title.trim(),
+
+                currentAmount =
+                    safeInitialAmount,
+
+                targetAmount =
+                    targetAmount,
+
+                daysLeft =
+                    daysLeft.coerceAtLeast(1),
+
+                colorKey =
+                    _uiState
+                        .value
+                        .savings
+                        .size % 4
+            )
+
+        updatePreferences { currentState ->
+            currentState.copy(
+                savings =
+                    listOf(newGoal) +
+                            currentState.savings
+            )
+        }
+    }
+
+    fun depositToSaving(
+        goalId: Long,
+        amount: Double
+    ) {
+
+        if (amount <= 0.0) {
+            return
+        }
+
+        val currentState =
+            _uiState.value
+
+        val goal =
+            currentState
+                .savings
+                .firstOrNull {
+                    it.id == goalId
+                }
+                ?: return
+
+        val remainingAmount =
+            (
+                    goal.targetAmount -
+                            goal.currentAmount
+                    ).coerceAtLeast(0.0)
+
+        val safeAmount =
+            amount.coerceAtMost(
+                remainingAmount
+            )
+
+        if (
+            safeAmount <= 0.0 ||
+            safeAmount >
+            currentState.totalBalance
+        ) {
+            return
+        }
+
+        /*
+         * Memperbarui target tabungan.
+         */
+        updatePreferences { state ->
+            state.copy(
+                savings =
+                    state.savings.map {
+                            savingGoal ->
+
+                        if (
+                            savingGoal.id ==
+                            goalId
+                        ) {
+                            savingGoal.copy(
+                                currentAmount =
+                                    savingGoal
+                                        .currentAmount +
+                                            safeAmount
+                            )
+                        } else {
+                            savingGoal
+                        }
+                    }
+            )
+        }
+
+        /*
+         * Deposit tabungan juga dicatat
+         * sebagai transaksi pengeluaran.
+         */
+        val savingTransaction =
+            FinanceTransaction(
+                id = 0L,
+                title = goal.title,
+                subtitle = "Saving deposit",
+                amount = safeAmount,
+                type = TransactionType.EXPENSE,
+                category = "Saving",
+                createdAt =
+                    System.currentTimeMillis()
+            )
+
+        viewModelScope.launch {
+            repository.insertTransaction(
+                savingTransaction
+            )
+        }
+    }
+
+    fun deleteSavingGoal(
+        id: Long
+    ) {
+
+        updatePreferences { currentState ->
+            currentState.copy(
+                savings =
+                    currentState
+                        .savings
+                        .filterNot {
+                            it.id == id
+                        }
+            )
+        }
+    }
+
+    /*
+     * Mengembalikan data demo.
+     */
+    fun resetDemoData() {
+
+        viewModelScope.launch {
+
+            val resetState =
+                repository.resetAllData()
+
+            /*
+             * Flow Room akan mengisi kembali
+             * daftar transaksi sesudah reset.
+             */
+            _uiState.value =
+                resetState.copy(
+                    transactions =
+                        _uiState
+                            .value
+                            .transactions
+                )
+        }
+    }
+
+    /*
+     * Helper untuk memperbarui state
+     * yang masih memakai SharedPreferences.
+     */
+    private fun updatePreferences(
+        transform:
+            (
+            CashNovaUiState
+        ) -> CashNovaUiState
+    ) {
+
+        val updatedState =
+            transform(_uiState.value)
+
+        _uiState.value =
+            updatedState
+
+        repository.savePreferences(
+            updatedState
+        )
+    }
+}

@@ -1,0 +1,26 @@
+# Android Studio
+*.iml
+.idea/
+.gradle/
+local.properties
+
+# Build output
+build/
+app/build/
+*/build/
+
+# Mac
+.DS_Store
+
+# Android generated files
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing files
+*.jks
+*.keystore
+
+# Temporary files
+*.log
+*.tmp

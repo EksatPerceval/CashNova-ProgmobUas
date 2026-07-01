@@ -1,0 +1,327 @@
+package com.example.cashnova
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color(0xFFF8F9FB) // Warna background utama
+                ) {
+                    DashboardScreen()
+                }
+            }
+        }
+    }
+}
+
+// ==========================================
+// PALET WARNA (Sesuai Desain)
+// ==========================================
+val DarkCardColor = Color(0xFF1E1E1E)
+val PrimaryRed = Color(0xFFE55845)
+val PrimaryPink = Color(0xFFF27889)
+val PrimaryBlue = Color(0xFF3182CE)
+val TextGray = Color(0xFFA0A0A0)
+
+// ==========================================
+// LAYAR UTAMA (DASHBOARD)
+// ==========================================
+@Composable
+fun DashboardScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp)
+    ) {
+        TopProfileBar()
+        Spacer(modifier = Modifier.height(24.dp))
+        BalanceSection()
+        Spacer(modifier = Modifier.height(32.dp))
+
+        SectionHeader(title = "Earnings")
+        EarningsRow()
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        SectionHeader(title = "Savings")
+        SavingsRow()
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        SectionHeader(title = "Transactions")
+        Text("Today", color = TextGray, fontSize = 14.sp, modifier = Modifier.padding(bottom = 12.dp))
+        TransactionsList()
+    }
+}
+
+// ==========================================
+// KOMPONEN UI
+// ==========================================
+
+@Composable
+fun TopProfileBar() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Avatar Placeholder
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color.LightGray),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Person, contentDescription = "Avatar", tint = Color.White)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(text = "Good Morning!", color = TextGray, fontSize = 12.sp)
+                Text(text = "Asep Resing", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+        }
+        Icon(Icons.Default.Settings, contentDescription = "Settings")
+    }
+}
+
+@Composable
+fun BalanceSection() {
+    Column {
+        // Main Balance Card
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCardColor),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(modifier = Modifier.padding(24.dp)) {
+                Column {
+                    Text(text = "Total Balance", color = TextGray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "$25,000.40", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Income & Outcome Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCardColor),
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Income", tint = Color.Green)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("Income", color = TextGray, fontSize = 12.sp)
+                        Text("$ 20,000", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCardColor),
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Outcome", tint = PrimaryRed)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("Outcome", color = TextGray, fontSize = 12.sp)
+                        Text("$ 17,000", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(text = "See All", color = PrimaryBlue, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun EarningsRow() {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        EarningCard(color = PrimaryRed, letter = "U", title = "Upwork", amount = "$ 3,000")
+        EarningCard(color = PrimaryPink, letter = "F", title = "Freepik", amount = "$ 3,000")
+        EarningCard(color = PrimaryBlue, letter = "E", title = "Envato", amount = "$ 2,000")
+    }
+}
+
+@Composable
+fun EarningCard(color: Color, letter: String, title: String, amount: String) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = color),
+        modifier = Modifier
+            .width(110.dp)
+            .height(130.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = letter, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Column {
+                Text(text = title, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                Text(text = amount, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun SavingsRow() {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        SavingCard(title = "iPhone 13 Mini", amount = "$699", progress = 0.6f, icon = Icons.Default.Phone)
+        SavingCard(title = "Macbook Pro M1", amount = "$1,499", progress = 0.4f, icon = Icons.Default.Build)
+    }
+}
+
+@Composable
+fun SavingCard(title: String, amount: String, progress: Float, icon: ImageVector) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.width(160.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Icon(icon, contentDescription = null, tint = TextGray, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = TextGray)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(text = amount, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+            LinearProgressIndicator(
+                progress = progress,
+                color = PrimaryRed,
+                trackColor = Color(0xFFF0F0F0),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+            )
+        }
+    }
+}
+
+@Composable
+fun TransactionsList() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TransactionItem(title = "Adobe Illustrator", subtitle = "Subscription fee", amount = "-$32.00", icon = Icons.Default.Edit, iconColor = PrimaryRed)
+        TransactionItem(title = "Dribbble", subtitle = "Subscription fee", amount = "-$15.00", icon = Icons.Default.Create, iconColor = PrimaryPink)
+        TransactionItem(title = "House", subtitle = "Saving", amount = "-$50.00", icon = Icons.Default.Home, iconColor = PrimaryBlue)
+    }
+}
+
+@Composable
+fun TransactionItem(title: String, subtitle: String, amount: String, icon: ImageVector, iconColor: Color) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(iconColor.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = iconColor)
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = subtitle, color = TextGray, fontSize = 12.sp)
+                }
+            }
+            Text(text = amount, color = PrimaryRed, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DefaultPreview() {
+    MaterialTheme {
+        DashboardScreen()
+    }
+}
