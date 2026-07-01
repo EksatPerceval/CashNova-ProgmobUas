@@ -11,7 +11,7 @@ import com.example.cashnova.data.local.entity.TransactionEntity
     entities = [
         TransactionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class CashNovaDatabase : RoomDatabase() {
@@ -20,9 +20,6 @@ abstract class CashNovaDatabase : RoomDatabase() {
 
     companion object {
 
-        /*
-         * Volatile memastikan semua thread melihat instance terbaru.
-         */
         @Volatile
         private var INSTANCE: CashNovaDatabase? = null
 
@@ -30,17 +27,15 @@ abstract class CashNovaDatabase : RoomDatabase() {
             context: Context
         ): CashNovaDatabase {
 
-            /*
-             * Jika database sudah pernah dibuat,
-             * gunakan instance yang sama.
-             */
             return INSTANCE ?: synchronized(this) {
 
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     CashNovaDatabase::class.java,
                     DATABASE_NAME
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
 
                 INSTANCE = instance
 

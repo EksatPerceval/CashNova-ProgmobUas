@@ -7,7 +7,9 @@ import com.example.cashnova.data.CashNovaRepository
 import com.example.cashnova.data.CashNovaUiState
 import com.example.cashnova.data.FinanceTransaction
 import com.example.cashnova.data.SavingGoal
+import com.example.cashnova.data.ThemeMode
 import com.example.cashnova.data.TransactionType
+import com.example.cashnova.data.Wallet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -151,7 +153,9 @@ class CashNovaViewModel(
                         },
 
                 createdAt =
-                    System.currentTimeMillis()
+                    System.currentTimeMillis(),
+                
+                walletId = _uiState.value.selectedWalletId
             )
 
         viewModelScope.launch {
@@ -163,9 +167,6 @@ class CashNovaViewModel(
 
     /*
      * Memperbarui transaksi Room.
-     *
-     * Fungsi ini akan digunakan oleh
-     * layar edit transaksi pada tahap berikutnya.
      */
     fun updateTransaction(
         transaction: FinanceTransaction
@@ -270,7 +271,8 @@ class CashNovaViewModel(
 
     fun depositToSaving(
         goalId: Long,
-        amount: Double
+        amount: Double,
+        category: String
     ) {
 
         if (amount <= 0.0) {
@@ -344,9 +346,10 @@ class CashNovaViewModel(
                 subtitle = "Saving deposit",
                 amount = safeAmount,
                 type = TransactionType.EXPENSE,
-                category = "Saving",
+                category = category.ifBlank { "Saving" },
                 createdAt =
-                    System.currentTimeMillis()
+                    System.currentTimeMillis(),
+                walletId = currentState.selectedWalletId
             )
 
         viewModelScope.launch {
@@ -370,6 +373,66 @@ class CashNovaViewModel(
                         }
             )
         }
+    }
+
+    fun selectWallet(walletId: Long) {
+        updatePreferences { it.copy(selectedWalletId = walletId) }
+    }
+
+    fun addWallet(name: String, initialBalance: Double) {
+        if (name.isBlank()) return
+        
+        val newWallet = Wallet(
+            id = System.currentTimeMillis(),
+            name = name.trim(),
+            balance = initialBalance,
+            colorKey = _uiState.value.wallets.size % 4
+        )
+        
+        updatePreferences { it.copy(wallets = it.wallets + newWallet) }
+    }
+
+    fun deleteWallet(walletId: Long) {
+        val currentState = _uiState.value
+        if (currentState.wallets.size <= 1) return // Prevent deleting the last wallet
+
+        viewModelScope.launch {
+            // Delete all transactions associated with this wallet
+            repository.deleteTransactionsByWalletId(walletId)
+
+            updatePreferences { state ->
+                val newWallets = state.wallets.filterNot { it.id == walletId }
+                val newSelectedWalletId = if (state.selectedWalletId == walletId) {
+                    newWallets.first().id
+                } else {
+                    state.selectedWalletId
+                }
+                
+                state.copy(
+                    wallets = newWallets,
+                    selectedWalletId = newSelectedWalletId
+                )
+            }
+        }
+    }
+
+    fun addCustomCategory(category: String) {
+        val cleaned = category.trim()
+        if (cleaned.isBlank()) return
+        
+        updatePreferences { currentState ->
+            if (currentState.allCategories.any { it.equals(cleaned, ignoreCase = true) }) {
+                currentState
+            } else {
+                currentState.copy(
+                    customCategories = currentState.customCategories + cleaned
+                )
+            }
+        }
+    }
+
+    fun updateThemeMode(themeMode: ThemeMode) {
+        updatePreferences { it.copy(themeMode = themeMode) }
     }
 
     /*

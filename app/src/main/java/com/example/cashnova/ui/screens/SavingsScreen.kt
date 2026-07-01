@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,7 +39,7 @@ fun SavingsScreen(
         initial: Double,
         daysLeft: Int
     ) -> Unit,
-    onDeposit: (goalId: Long, amount: Double) -> Unit,
+    onDeposit: (goalId: Long, amount: Double, category: String) -> Unit,
     onDeleteGoal: (Long) -> Unit
 ) {
     var showAddGoal by remember { mutableStateOf(false) }
@@ -102,9 +101,10 @@ fun SavingsScreen(
         DepositDialog(
             goal = goal,
             availableBalance = state.totalBalance,
+            categories = state.allCategories,
             onDismiss = { selectedGoal = null },
-            onDeposit = { amount ->
-                onDeposit(goal.id, amount)
+            onDeposit = { amount, category ->
+                onDeposit(goal.id, amount, category)
             }
         )
     }

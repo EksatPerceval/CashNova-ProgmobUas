@@ -27,8 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.cashnova.ui.analytics.MonthlyFinancePoint
 import com.example.cashnova.ui.theme.CashNovaGreen
-import com.example.cashnova.ui.theme.CashNovaLine
-import com.example.cashnova.ui.theme.CashNovaMuted
 import com.example.cashnova.ui.theme.CashNovaRed
 import com.example.cashnova.ui.util.formatMoney
 import java.text.DecimalFormat
@@ -39,12 +37,13 @@ import kotlin.math.abs
 private val ChartAreaHeight = 180.dp
 
 /**
- * Grafik batang pemasukan dan pengeluaran per bulan.
+ * Grafik batang pemasukan dan pengeluaran per periode.
  */
 @Composable
 fun MonthlyIncomeExpenseChart(
     data: List<MonthlyFinancePoint>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    title: String = "Grafik Keuangan"
 ) {
     val maximumValue = data
         .maxOfOrNull { point ->
@@ -63,22 +62,25 @@ fun MonthlyIncomeExpenseChart(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = "Grafik 6 Bulan",
-                style = MaterialTheme.typography.titleLarge
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(5.dp))
 
             Text(
                 text = "Perbandingan pemasukan dan pengeluaran",
-                color = CashNovaMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -160,7 +162,7 @@ fun MonthlyIncomeExpenseChart(
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Spacer(modifier = Modifier.width(70.dp))
+                Spacer(modifier = Modifier.width(62.dp))
 
                 Row(
                     modifier = Modifier.weight(1f)
@@ -168,10 +170,11 @@ fun MonthlyIncomeExpenseChart(
                     data.forEach { point ->
                         Text(
                             text = point.label,
-                            color = CashNovaMuted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -180,19 +183,25 @@ fun MonthlyIncomeExpenseChart(
             Spacer(modifier = Modifier.height(20.dp))
 
             HorizontalDivider(
-                color = CashNovaLine
+                color = MaterialTheme.colorScheme.outlineVariant
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 FinanceTotalText(
                     title = "Total pemasukan",
                     amount = totalIncome,
                     color = CashNovaGreen
+                )
+
+                FinanceNetBalanceText(
+                    amount = totalIncome - totalExpense,
+                    useCompact = true
                 )
 
                 FinanceTotalText(
@@ -235,22 +244,25 @@ fun IncomeExpenseDonutChart(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = "Perbandingan Bulan Ini",
-                style = MaterialTheme.typography.titleLarge
+                text = "Perbandingan Periode Ini",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(5.dp))
 
             Text(
-                text = "Komposisi pemasukan dan pengeluaran bulan berjalan",
-                color = CashNovaMuted,
+                text = "Komposisi pemasukan dan pengeluaran periode berjalan",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -262,6 +274,7 @@ fun IncomeExpenseDonutChart(
                     .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center
             ) {
+                val trackColor = MaterialTheme.colorScheme.surfaceVariant
                 Canvas(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -269,7 +282,7 @@ fun IncomeExpenseDonutChart(
 
                     if (total <= 0.0) {
                         drawArc(
-                            color = CashNovaLine,
+                            color = trackColor,
                             startAngle = -90f,
                             sweepAngle = 360f,
                             useCenter = false,
@@ -308,14 +321,15 @@ fun IncomeExpenseDonutChart(
                 ) {
                     Text(
                         text = "Total arus kas",
-                        color = CashNovaMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
 
                     Text(
                         text = formatCompactRupiah(total),
                         fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -335,12 +349,28 @@ fun IncomeExpenseDonutChart(
                 amount = safeExpense,
                 color = CashNovaRed
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            FinanceNetBalanceText(
+                amount = safeIncome - safeExpense,
+                alignment = Alignment.Start,
+                showTitle = true,
+                useCompact = false
+            )
         }
     }
 }
 
 @Composable
 private fun ChartGrid() {
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
     Canvas(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -353,7 +383,7 @@ private fun ChartGrid() {
                         (lineCount - 1).toFloat()
 
             drawLine(
-                color = CashNovaLine,
+                color = gridColor,
                 start = Offset(
                     x = 0f,
                     y = y
@@ -381,20 +411,23 @@ private fun ChartYAxis(
     ) {
         Text(
             text = formatCompactRupiah(maximumValue),
-            color = CashNovaMuted,
-            fontSize = 10.sp
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium
         )
 
         Text(
             text = formatCompactRupiah(maximumValue / 2.0),
-            color = CashNovaMuted,
-            fontSize = 10.sp
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium
         )
 
         Text(
             text = "Rp0",
-            color = CashNovaMuted,
-            fontSize = 10.sp
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -465,8 +498,9 @@ private fun ChartLegend(
 
         Text(
             text = title,
-            color = CashNovaMuted,
-            fontSize = 12.sp
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -483,12 +517,50 @@ private fun FinanceTotalText(
     ) {
         Text(
             text = title,
-            color = CashNovaMuted,
-            fontSize = 11.sp
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
         )
 
         Text(
             text = formatCompactRupiah(amount),
+            color = color,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun FinanceNetBalanceText(
+    amount: Double,
+    alignment: Alignment.Horizontal = Alignment.CenterHorizontally,
+    showTitle: Boolean = true,
+    useCompact: Boolean = true
+) {
+    val isPositive = amount >= 0
+    val color = if (isPositive) CashNovaGreen else CashNovaRed
+    val sign = if (isPositive) "+" else "-"
+    val formattedAmount = if (useCompact) {
+        formatCompactRupiah(abs(amount))
+    } else {
+        formatMoney(abs(amount))
+    }
+
+    Column(
+        horizontalAlignment = alignment
+    ) {
+        if (showTitle) {
+            Text(
+                text = "Selisih",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Text(
+            text = "$sign$formattedAmount",
             color = color,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold
@@ -518,13 +590,14 @@ private fun FinanceAmountRow(
         Text(
             text = title,
             modifier = Modifier.weight(1f),
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Text(
             text = formatMoney(amount),
             color = color,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.ExtraBold
         )
     }
 }

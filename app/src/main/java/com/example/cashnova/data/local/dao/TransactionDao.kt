@@ -78,6 +78,19 @@ interface TransactionDao {
     )
 
     /*
+     * Menghapus transaksi berdasarkan walletId.
+     */
+    @Query(
+        """
+        DELETE FROM transactions
+        WHERE walletId = :walletId
+        """
+    )
+    suspend fun deleteTransactionsByWalletId(
+        walletId: Long
+    )
+
+    /*
      * Menghapus seluruh transaksi.
      */
     @Query("DELETE FROM transactions")

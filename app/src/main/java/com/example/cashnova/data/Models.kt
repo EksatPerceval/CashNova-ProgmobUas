@@ -5,6 +5,19 @@ enum class TransactionType {
     EXPENSE
 }
 
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
+}
+
+data class Wallet(
+    val id: Long,
+    val name: String,
+    val balance: Double,
+    val colorKey: Int = 0
+)
+
 data class FinanceTransaction(
     val id: Long,
     val title: String,
@@ -12,7 +25,8 @@ data class FinanceTransaction(
     val amount: Double,
     val type: TransactionType,
     val category: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val walletId: Long = 0L
 )
 
 data class SavingGoal(
@@ -43,40 +57,74 @@ data class CashNovaUiState(
     val profileName: String = "Asep Resing",
     val openingBalance: Double = 22_000.40,
     val transactions: List<FinanceTransaction> = emptyList(),
-    val savings: List<SavingGoal> = emptyList()
+    val savings: List<SavingGoal> = emptyList(),
+    val wallets: List<Wallet> = listOf(Wallet(0L, "Main Wallet", 0.0)),
+    val selectedWalletId: Long = 0L,
+    val customCategories: List<String> = emptyList(),
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
+    val defaultCategories = listOf("Salary", "Freelance", "Food", "Transport", "Shopping", "Utility", "Subscription", "Payment", "Saving", "Other")
+    
+    val allCategories: List<String>
+        get() = (defaultCategories + customCategories).distinct()
+
+    val currentWallet: Wallet?
+        get() = wallets.find { it.id == selectedWalletId }
+
+    val filteredTransactions: List<FinanceTransaction>
+        get() = transactions.filter { it.walletId == selectedWalletId }
+
     val totalIncome: Double
-        get() = transactions
+        get() = filteredTransactions
             .filter { it.type == TransactionType.INCOME }
             .sumOf { it.amount }
 
     val totalExpense: Double
-        get() = transactions
+        get() = filteredTransactions
             .filter { it.type == TransactionType.EXPENSE }
             .sumOf { it.amount }
 
     val totalBalance: Double
-        get() = openingBalance + totalIncome - totalExpense
+        get() {
+            val wallet = currentWallet ?: return 0.0
+            return getWalletBalance(wallet)
+        }
+        
+    fun getWalletBalance(wallet: Wallet): Double {
+        val walletTransactions = transactions.filter { it.walletId == wallet.id }
+        val income = walletTransactions
+            .filter { it.type == TransactionType.INCOME }
+            .sumOf { it.amount }
+        val expense = walletTransactions
+            .filter { it.type == TransactionType.EXPENSE }
+            .sumOf { it.amount }
+        return wallet.balance + income - expense
+    }
 
     val earningSources: List<EarningSource>
         get() {
-            val preferred = listOf(
-                Triple("Upwork", "U", 0),
-                Triple("Freepik", "F", 1),
-                Triple("Envato", "E", 2)
-            )
+            // Ambil semua transaksi pemasukan untuk wallet yang sedang aktif
+            val incomeTransactions = filteredTransactions.filter { it.type == TransactionType.INCOME }
+            
+            // Kelompokkan berdasarkan Kategori agar pengguna bisa melihat rincian sumber pemasukan
+            val groupedByCategory = incomeTransactions
+                .groupBy { it.category.trim().ifBlank { "Other" } }
+                .mapValues { entry -> entry.value.sumOf { it.amount } }
+                .toList()
+                .sortedByDescending { it.second } // Urutkan dari nominal terbesar
 
-            return preferred.map { (source, letter, colorKey) ->
+            if (groupedByCategory.isEmpty()) {
+                return listOf(
+                    EarningSource("No Income", 0.0, "?", 0)
+                )
+            }
+
+            return groupedByCategory.take(6).mapIndexed { index, (category, amount) ->
                 EarningSource(
-                    name = source,
-                    amount = transactions
-                        .filter {
-                            it.type == TransactionType.INCOME &&
-                                it.title.equals(source, ignoreCase = true)
-                        }
-                        .sumOf { it.amount },
-                    letter = letter,
-                    colorKey = colorKey
+                    name = category,
+                    amount = amount,
+                    letter = category.firstOrNull()?.toString()?.uppercase() ?: "I",
+                    colorKey = index % 3
                 )
             }
         }

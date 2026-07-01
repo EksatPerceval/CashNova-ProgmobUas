@@ -21,7 +21,8 @@ fun TransactionEntity.toFinanceTransaction():
         amount = amount,
         type = transactionType,
         category = category,
-        createdAt = createdAt
+        createdAt = createdAt,
+        walletId = walletId
     )
 }
 
@@ -35,6 +36,7 @@ fun FinanceTransaction.toTransactionEntity():
         amount = amount,
         type = type.name,
         category = category,
-        createdAt = createdAt
+        createdAt = createdAt,
+        walletId = walletId
     )
 }

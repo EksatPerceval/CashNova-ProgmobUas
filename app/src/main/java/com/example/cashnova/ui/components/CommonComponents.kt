@@ -2,14 +2,17 @@ package com.example.cashnova.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,7 +21,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Brush
@@ -76,7 +80,7 @@ fun ScreenHeader(
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Kembali"
             )
         }
@@ -84,7 +88,8 @@ fun ScreenHeader(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
@@ -105,7 +110,9 @@ fun SectionTitle(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
         )
 
         if (onSeeAll != null) {
@@ -122,75 +129,206 @@ fun SectionTitle(
 @Composable
 fun BalanceCard(
     balance: Double,
+    walletName: String = "My Wallet",
     onClick: (() -> Unit)? = null
 ) {
+    // Dark Premium Style matching Image 2
+    val cardBg = if (isSystemInDarkTheme()) Color(0xFF151516) else Color(0xFF1E1E1F)
+
     Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CashNovaDark),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = cardBg,
+            contentColor = Color.White
+        ),
         modifier = Modifier
             .fillMaxWidth()
+            .height(200.dp)
+            .clip(RoundedCornerShape(28.dp))
             .then(
                 if (onClick != null) Modifier.clickable(onClick = onClick)
                 else Modifier
             )
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 26.dp, vertical = 28.dp)
-        ) {
-            Text(
-                text = "Total Balance",
-                color = Color.White.copy(alpha = 0.55f),
-                fontSize = 15.sp
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Decorative shapes matching image 2
+            Box(
+                modifier = Modifier
+                    .size(160.dp)
+                    .offset(x = 70.dp, y = (-50).dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF3787D4))
+                    .align(Alignment.TopEnd)
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = formatMoney(balance, showCents = true),
-                color = Color.White,
-                style = MaterialTheme.typography.displaySmall
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .offset(x = 80.dp, y = 30.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF6DD64))
+                    .align(Alignment.TopEnd)
             )
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .offset(x = (-30).dp, y = 50.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF18C93A).copy(alpha = 0.4f))
+                    .align(Alignment.BottomStart)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(26.dp)
+            ) {
+                Text(
+                    text = "Total Balance",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = formatMoney(balance, showCents = true),
+                    color = Color.White,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = walletName,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun IncomeExpenseCard(
-    title: String,
-    amount: Double,
-    isIncome: Boolean,
+fun IncomeOutcomeCard(
+    income: Double,
+    outcome: Double,
     modifier: Modifier = Modifier
 ) {
+    val cardBg = if (isSystemInDarkTheme()) Color(0xFF151516) else Color(0xFF1E1E1F)
+
     Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CashNovaDark),
-        modifier = modifier
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = cardBg,
+            contentColor = Color.White
+        ),
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 22.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = if (isIncome) {
-                    Icons.Default.ArrowDownward
-                } else {
-                    Icons.Default.ArrowUpward
-                },
-                contentDescription = null,
-                tint = if (isIncome) CashNovaGreen else CashNovaRed,
-                modifier = Modifier.size(23.dp)
+        Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))) {
+            // Decorative shapes matching image 2
+            Box(
+                modifier = Modifier
+                    .size(70.dp)
+                    .offset(x = (-25).dp, y = (-25).dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFA684EB).copy(alpha = 0.45f))
+                    .align(Alignment.TopStart)
             )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = title,
-                    color = Color.White.copy(alpha = 0.55f),
-                    fontSize = 12.sp
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .offset(x = 20.dp, y = 20.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF1D1C5).copy(alpha = 0.45f))
+                    .align(Alignment.BottomEnd)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp, horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Income
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDownward,
+                        contentDescription = null,
+                        tint = Color(0xFF18C93A),
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Income",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = formatMoney(income),
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+
+                // Vertical Divider
+                Box(
+                    modifier = Modifier
+                        .height(42.dp)
+                        .width(1.dp)
+                        .background(Color.White.copy(alpha = 0.25f))
                 )
-                Text(
-                    text = formatMoney(amount),
-                    color = Color.White,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
+
+                // Outcome
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowUpward,
+                        contentDescription = null,
+                        tint = Color(0xFFEB5745),
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Outcome",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = formatMoney(outcome),
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
             }
         }
     }
@@ -204,7 +342,9 @@ fun SavingCompactCard(
 ) {
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         modifier = modifier.then(
             if (onClick != null) Modifier.clickable(onClick = onClick)
             else Modifier
@@ -220,12 +360,12 @@ fun SavingCompactCard(
                 Icon(
                     imageVector = goalIcon(goal.title),
                     contentDescription = null,
-                    tint = CashNovaMuted,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp)
                 )
                 Text(
                     text = "${(goal.progress * 100).toInt()}%",
-                    color = CashNovaMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
             }
@@ -233,12 +373,14 @@ fun SavingCompactCard(
             Text(
                 text = goal.title,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = formatMoney(goal.targetAmount),
                 fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(10.dp))
             LinearProgressIndicator(
@@ -248,7 +390,7 @@ fun SavingCompactCard(
                     .height(6.dp)
                     .clip(RoundedCornerShape(99.dp)),
                 color = savingColor(goal.colorKey),
-                trackColor = Color(0xFFF0F1F4)
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }
@@ -261,6 +403,7 @@ fun SavingLargeCard(
     onDelete: () -> Unit
 ) {
     val background = savingColor(goal.colorKey)
+    val isLightColor = goal.colorKey == 3 // Yellow is light
 
     Card(
         shape = RoundedCornerShape(18.dp),
@@ -280,15 +423,15 @@ fun SavingLargeCard(
                 Column {
                     Text(
                         text = goal.title,
-                        color = if (goal.colorKey == 3) CashNovaDark else Color.White,
+                        color = if (isLightColor) Color.Black else Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Balance",
-                        color = if (goal.colorKey == 3) {
-                            CashNovaDark.copy(alpha = 0.65f)
+                        color = if (isLightColor) {
+                            Color.Black.copy(alpha = 0.65f)
                         } else {
                             Color.White.copy(alpha = 0.75f)
                         },
@@ -296,7 +439,7 @@ fun SavingLargeCard(
                     )
                     Text(
                         text = "${formatMoney(goal.currentAmount)} of ${formatMoney(goal.targetAmount)}",
-                        color = if (goal.colorKey == 3) CashNovaDark else Color.White,
+                        color = if (isLightColor) Color.Black else Color.White,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
                     )
@@ -306,8 +449,8 @@ fun SavingLargeCard(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Hapus target",
-                        tint = if (goal.colorKey == 3) {
-                            CashNovaDark.copy(alpha = 0.70f)
+                        tint = if (isLightColor) {
+                            Color.Black.copy(alpha = 0.70f)
                         } else {
                             Color.White.copy(alpha = 0.85f)
                         }
@@ -323,9 +466,9 @@ fun SavingLargeCard(
                     .fillMaxWidth()
                     .height(5.dp)
                     .clip(RoundedCornerShape(99.dp)),
-                color = if (goal.colorKey == 3) CashNovaDark else Color.White,
-                trackColor = if (goal.colorKey == 3) {
-                    CashNovaDark.copy(alpha = 0.20f)
+                color = if (isLightColor) Color.Black else Color.White,
+                trackColor = if (isLightColor) {
+                    Color.Black.copy(alpha = 0.20f)
                 } else {
                     Color.White.copy(alpha = 0.30f)
                 }
@@ -339,14 +482,14 @@ fun SavingLargeCard(
             ) {
                 Text(
                     text = "See detail",
-                    color = if (goal.colorKey == 3) CashNovaDark else Color.White,
+                    color = if (isLightColor) Color.Black else Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = "${goal.daysLeft} days left",
-                    color = if (goal.colorKey == 3) {
-                        CashNovaDark.copy(alpha = 0.70f)
+                    color = if (isLightColor) {
+                        Color.Black.copy(alpha = 0.70f)
                     } else {
                         Color.White.copy(alpha = 0.75f)
                     },
@@ -374,7 +517,7 @@ fun TransactionRow(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .then(
                 if (onClick != null) Modifier.clickable(onClick = onClick)
                 else Modifier
@@ -403,11 +546,12 @@ fun TransactionRow(
             Text(
                 text = transaction.title,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = transaction.subtitle,
-                color = CashNovaMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 maxLines = 1
             )

@@ -109,6 +109,28 @@ class CashNovaRepository(
                         KEY_SAVINGS,
                         "[]"
                     ).orEmpty()
+                ),
+                
+                wallets = decodeWallets(
+                    preferences.getString(
+                        KEY_WALLETS,
+                        "[]"
+                    ).orEmpty()
+                ).ifEmpty {
+                    listOf(Wallet(0L, "Main Wallet", DEFAULT_OPENING_BALANCE))
+                },
+                
+                selectedWalletId = preferences.getLong(KEY_SELECTED_WALLET_ID, 0L),
+                
+                customCategories = decodeCustomCategories(
+                    preferences.getString(
+                        KEY_CUSTOM_CATEGORIES,
+                        "[]"
+                    ).orEmpty()
+                ),
+
+                themeMode = ThemeMode.valueOf(
+                    preferences.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
                 )
             )
         }.getOrElse {
@@ -143,6 +165,22 @@ class CashNovaRepository(
             .putString(
                 KEY_SAVINGS,
                 encodeSavings(state.savings)
+            )
+            .putString(
+                KEY_WALLETS,
+                encodeWallets(state.wallets)
+            )
+            .putLong(
+                KEY_SELECTED_WALLET_ID,
+                state.selectedWalletId
+            )
+            .putString(
+                KEY_CUSTOM_CATEGORIES,
+                encodeCustomCategories(state.customCategories)
+            )
+            .putString(
+                KEY_THEME_MODE,
+                state.themeMode.name
             )
             .apply()
     }
@@ -231,6 +269,13 @@ class CashNovaRepository(
         transactionDao.deleteTransactionById(
             transactionId
         )
+    }
+
+    /*
+     * Menghapus transaksi berdasarkan walletId.
+     */
+    suspend fun deleteTransactionsByWalletId(walletId: Long) {
+        transactionDao.deleteTransactionsByWalletId(walletId)
     }
 
     /*
@@ -344,7 +389,8 @@ class CashNovaRepository(
                         createdAt = item.optLong(
                             "createdAt",
                             System.currentTimeMillis()
-                        )
+                        ),
+                        walletId = 0L
                     )
                 )
             }
@@ -440,6 +486,52 @@ class CashNovaRepository(
         }
     }
 
+    private fun encodeWallets(wallets: List<Wallet>): String {
+        val array = JSONArray()
+        wallets.forEach { wallet ->
+            array.put(
+                JSONObject()
+                    .put("id", wallet.id)
+                    .put("name", wallet.name)
+                    .put("balance", wallet.balance)
+                    .put("colorKey", wallet.colorKey)
+            )
+        }
+        return array.toString()
+    }
+
+    private fun decodeWallets(json: String): List<Wallet> {
+        if (json.isBlank()) return emptyList()
+        val array = JSONArray(json)
+        return buildList {
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                add(
+                    Wallet(
+                        id = obj.getLong("id"),
+                        name = obj.getString("name"),
+                        balance = obj.getDouble("balance"),
+                        colorKey = obj.optInt("colorKey", 0)
+                    )
+                )
+            }
+        }
+    }
+
+    private fun encodeCustomCategories(categories: List<String>): String {
+        return JSONArray(categories).toString()
+    }
+
+    private fun decodeCustomCategories(json: String): List<String> {
+        if (json.isBlank()) return emptyList()
+        val array = JSONArray(json)
+        return buildList {
+            for (i in 0 until array.length()) {
+                add(array.getString(i))
+            }
+        }
+    }
+
     /*
      * Data SharedPreferences awal.
      */
@@ -495,7 +587,14 @@ class CashNovaRepository(
                     daysLeft = 1_095,
                     colorKey = 3
                 )
-            )
+            ),
+            wallets = listOf(
+                Wallet(0L, "Main Wallet", DEFAULT_OPENING_BALANCE),
+                Wallet(1L, "Savings Account", 1000.0, 1)
+            ),
+            selectedWalletId = 0L,
+            customCategories = emptyList(),
+            themeMode = ThemeMode.SYSTEM
         )
     }
 
@@ -520,7 +619,8 @@ class CashNovaRepository(
                 amount = 32.0,
                 type = TransactionType.EXPENSE,
                 category = "Subscription",
-                createdAt = now
+                createdAt = now,
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 2L,
@@ -529,7 +629,8 @@ class CashNovaRepository(
                 amount = 15.0,
                 type = TransactionType.EXPENSE,
                 category = "Subscription",
-                createdAt = now - 1_000L
+                createdAt = now - 1_000L,
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 3L,
@@ -538,7 +639,8 @@ class CashNovaRepository(
                 amount = 953.0,
                 type = TransactionType.EXPENSE,
                 category = "Payment",
-                createdAt = now - oneDay
+                createdAt = now - oneDay,
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 4L,
@@ -547,7 +649,8 @@ class CashNovaRepository(
                 amount = 1_000.0,
                 type = TransactionType.EXPENSE,
                 category = "Utility",
-                createdAt = now - (2 * oneDay)
+                createdAt = now - (2 * oneDay),
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 5L,
@@ -556,7 +659,8 @@ class CashNovaRepository(
                 amount = 2_000.0,
                 type = TransactionType.EXPENSE,
                 category = "Shopping",
-                createdAt = now - (3 * oneDay)
+                createdAt = now - (3 * oneDay),
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 6L,
@@ -565,7 +669,8 @@ class CashNovaRepository(
                 amount = 5_000.0,
                 type = TransactionType.EXPENSE,
                 category = "Saving",
-                createdAt = now - (4 * oneDay)
+                createdAt = now - (4 * oneDay),
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 7L,
@@ -574,7 +679,8 @@ class CashNovaRepository(
                 amount = 8_000.0,
                 type = TransactionType.EXPENSE,
                 category = "Saving",
-                createdAt = now - (5 * oneDay)
+                createdAt = now - (5 * oneDay),
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 8L,
@@ -583,7 +689,8 @@ class CashNovaRepository(
                 amount = 3_000.0,
                 type = TransactionType.INCOME,
                 category = "Freelance",
-                createdAt = now - (6 * oneDay)
+                createdAt = now - (6 * oneDay),
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 9L,
@@ -592,7 +699,8 @@ class CashNovaRepository(
                 amount = 3_000.0,
                 type = TransactionType.INCOME,
                 category = "Freelance",
-                createdAt = now - (7 * oneDay)
+                createdAt = now - (7 * oneDay),
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 10L,
@@ -601,7 +709,8 @@ class CashNovaRepository(
                 amount = 2_000.0,
                 type = TransactionType.INCOME,
                 category = "Freelance",
-                createdAt = now - (8 * oneDay)
+                createdAt = now - (8 * oneDay),
+                walletId = 0L
             ),
             FinanceTransaction(
                 id = 11L,
@@ -610,7 +719,8 @@ class CashNovaRepository(
                 amount = 12_000.0,
                 type = TransactionType.INCOME,
                 category = "Salary",
-                createdAt = now - (9 * oneDay)
+                createdAt = now - (9 * oneDay),
+                walletId = 0L
             )
         )
     }
@@ -631,6 +741,11 @@ class CashNovaRepository(
 
         private const val KEY_SAVINGS =
             "savings"
+
+        private const val KEY_WALLETS = "wallets"
+        private const val KEY_SELECTED_WALLET_ID = "selected_wallet_id"
+        private const val KEY_CUSTOM_CATEGORIES = "custom_categories"
+        private const val KEY_THEME_MODE = "theme_mode"
 
         /*
          * Nama key transaksi dari repository lama.

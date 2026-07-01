@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,7 +53,7 @@ import com.example.cashnova.data.EarningSource
 import com.example.cashnova.data.TransactionType
 import com.example.cashnova.ui.components.AddTransactionDialog
 import com.example.cashnova.ui.components.BalanceCard
-import com.example.cashnova.ui.components.IncomeExpenseCard
+import com.example.cashnova.ui.components.IncomeOutcomeCard
 import com.example.cashnova.ui.components.SavingCompactCard
 import com.example.cashnova.ui.components.SectionTitle
 import com.example.cashnova.ui.components.TransactionRow
@@ -77,7 +76,8 @@ fun DashboardScreen(
         amount: Double,
         type: TransactionType,
         category: String
-    ) -> Unit
+    ) -> Unit,
+    onAddCustomCategory: (String) -> Unit
 ) {
     var showAddTransaction by remember {
         mutableStateOf(false)
@@ -127,8 +127,16 @@ fun DashboardScreen(
             }
 
             item {
+                Text(
+                    text = "Active Wallet: ${state.currentWallet?.name ?: "None"}",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
                 BalanceCard(
                     balance = state.totalBalance,
+                    walletName = state.currentWallet?.name ?: "My Wallet",
                     onClick = onOpenWallet
                 )
 
@@ -136,25 +144,10 @@ fun DashboardScreen(
                     modifier = Modifier.height(16.dp)
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(14.dp)
-                ) {
-                    IncomeExpenseCard(
-                        title = "Pemasukan",
-                        amount = state.totalIncome,
-                        isIncome = true,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    IncomeExpenseCard(
-                        title = "Pengeluaran",
-                        amount = state.totalExpense,
-                        isIncome = false,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                IncomeOutcomeCard(
+                    income = state.totalIncome,
+                    outcome = state.totalExpense
+                )
 
                 Spacer(
                     modifier = Modifier.height(28.dp)
@@ -235,8 +228,9 @@ fun DashboardScreen(
                 )
 
                 Text(
-                    text = "Terbaru",
-                    color = CashNovaMuted,
+                    text = "Terbaru (${state.currentWallet?.name})",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
 
@@ -246,7 +240,7 @@ fun DashboardScreen(
             }
 
             items(
-                items = state.transactions.take(4),
+                items = state.filteredTransactions.take(4),
                 key = { transaction ->
                     transaction.id
                 }
@@ -266,10 +260,12 @@ fun DashboardScreen(
 
     if (showAddTransaction) {
         AddTransactionDialog(
+            categories = state.allCategories,
             onDismiss = {
                 showAddTransaction = false
             },
-            onSave = onAddTransaction
+            onSave = onAddTransaction,
+            onAddCustomCategory = onAddCustomCategory
         )
     }
 }
@@ -283,17 +279,18 @@ private fun ProfileHeader(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // ... (rest of the code remains the same as before)
         Box(
             modifier = Modifier
                 .size(54.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFD1D2D6)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = "Profil",
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(30.dp)
             )
         }
@@ -307,7 +304,8 @@ private fun ProfileHeader(
         ) {
             Text(
                 text = "Selamat datang!",
-                color = CashNovaMuted,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
                 fontSize = 13.sp
             )
 
@@ -329,9 +327,6 @@ private fun ProfileHeader(
     }
 }
 
-/**
- * Kartu untuk membuka halaman grafik.
- */
 @Composable
 private fun AnalyticsShortcutCard(
     onClick: () -> Unit
@@ -339,7 +334,7 @@ private fun AnalyticsShortcutCard(
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -376,7 +371,7 @@ private fun AnalyticsShortcutCard(
 
                 Text(
                     text = "Lihat pemasukan dan pengeluaran",
-                    color = CashNovaMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
             }
@@ -384,15 +379,12 @@ private fun AnalyticsShortcutCard(
             Icon(
                 imageVector = Icons.Default.ArrowForward,
                 contentDescription = "Buka grafik",
-                tint = CashNovaMuted
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
     }
 }
 
-/**
- * Ikon grafik sederhana tanpa material-icons-extended.
- */
 @Composable
 private fun MiniBarChartIcon() {
     Row(
@@ -446,12 +438,6 @@ private fun MiniBarChartIcon() {
     }
 }
 
-/**
- * Menampilkan kartu sumber pendapatan.
- *
- * Fungsi ini sebelumnya hilang sehingga EarningsRow
- * menjadi unresolved reference.
- */
 @Composable
 private fun EarningsRow(
     earnings: List<EarningSource>

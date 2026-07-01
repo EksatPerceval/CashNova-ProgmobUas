@@ -26,5 +26,7 @@ data class TransactionEntity(
     /*
      * Waktu transaksi dalam format Unix timestamp.
      */
-    val createdAt: Long
+    val createdAt: Long,
+
+    val walletId: Long = 0L
 )

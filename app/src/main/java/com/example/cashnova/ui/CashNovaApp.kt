@@ -109,7 +109,8 @@ fun CashNovaApp(
                     navController.navigate(Routes.ANALYTICS)
                 },
 
-                onAddTransaction = viewModel::addTransaction
+                onAddTransaction = viewModel::addTransaction,
+                onAddCustomCategory = viewModel::addCustomCategory
             )
         }
 
@@ -144,7 +145,11 @@ fun CashNovaApp(
                 onDeleteTransaction = viewModel::deleteTransaction,
                 onOpenSavings = {
                     navController.navigate(Routes.SAVINGS)
-                }
+                },
+                onSelectWallet = viewModel::selectWallet,
+                onAddWallet = viewModel::addWallet,
+                onDeleteWallet = viewModel::deleteWallet,
+                onAddCustomCategory = viewModel::addCustomCategory
             )
         }
 
@@ -155,7 +160,8 @@ fun CashNovaApp(
                     navController.popBackStack()
                 },
                 onSaveName = viewModel::updateProfileName,
-                onResetData = viewModel::resetDemoData
+                onResetData = viewModel::resetDemoData,
+                onUpdateTheme = viewModel::updateThemeMode
             )
         }
     }

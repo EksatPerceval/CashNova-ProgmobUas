@@ -1,21 +1,24 @@
-# CashNova Complete
+# CashSnova Complete
 
-Project ini mengembangkan tampilan awal CashNova menjadi aplikasi Jetpack Compose yang dapat digunakan.
+Project ini mengembangkan tampilan awal CashSnova menjadi aplikasi Jetpack Compose yang dapat digunakan.
 
 ## Fitur
 
 - Onboarding.
 - Dashboard sesuai referensi Figma.
 - Ringkasan saldo, pemasukan, dan pengeluaran yang dihitung otomatis.
-- Daftar sumber pendapatan.
+- Daftar sumber pendapatan dinamis.
 - Halaman saving goals.
 - Tambah target tabungan.
-- Setor ke target tabungan.
-- Halaman wallet dan seluruh transaksi.
+- Setor ke target tabungan dengan pilihan kategori.
+- Halaman wallet (Multi-wallet support).
+- Tambah, pilih, dan hapus wallet.
 - Tambah transaksi pemasukan atau pengeluaran.
 - Detail dan hapus transaksi.
 - Ubah nama profil.
-- Data tersimpan lokal memakai SharedPreferences + JSON.
+- Support Dark Mode & Light Mode.
+- Grafik Keuangan dengan filter rentang waktu dan wallet.
+- Data tersimpan lokal memakai Room Database + SharedPreferences.
 - Reset demo data.
 
 ## Cara memasang pada project yang sudah ada
