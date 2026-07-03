@@ -368,6 +368,9 @@ fun IncomeExpenseDonutChart(
     }
 }
 
+/*
+ * Menggambar garis grid horizontal sebagai acuan visual tinggi batang chart.
+ */
 @Composable
 private fun ChartGrid() {
     val gridColor = MaterialTheme.colorScheme.outlineVariant
@@ -398,6 +401,9 @@ private fun ChartGrid() {
     }
 }
 
+/*
+ * Label sumbu Y (max, setengah, nol) dalam format rupiah compact.
+ */
 @Composable
 private fun ChartYAxis(
     maximumValue: Double
@@ -432,6 +438,10 @@ private fun ChartYAxis(
     }
 }
 
+/*
+ * Batang tunggal untuk nilai finansial.
+ * Tinggi batang dinormalisasi terhadap nilai maksimum dan dianimasikan.
+ */
 @Composable
 private fun FinanceBar(
     value: Double,
@@ -479,6 +489,9 @@ private fun FinanceBar(
     )
 }
 
+/*
+ * Legend kecil (warna + label) untuk seri data chart.
+ */
 @Composable
 private fun ChartLegend(
     title: String,
@@ -505,6 +518,9 @@ private fun ChartLegend(
     }
 }
 
+/*
+ * Teks total ringkas untuk blok pemasukan/pengeluaran di bagian footer chart.
+ */
 @Composable
 private fun FinanceTotalText(
     title: String,
@@ -531,6 +547,10 @@ private fun FinanceTotalText(
     }
 }
 
+/*
+ * Menampilkan selisih bersih (income - expense).
+ * Warna hijau untuk surplus, merah untuk defisit.
+ */
 @Composable
 private fun FinanceNetBalanceText(
     amount: Double,
@@ -568,6 +588,9 @@ private fun FinanceNetBalanceText(
     }
 }
 
+/*
+ * Baris ringkas untuk menampilkan label + nominal (dipakai di donut chart).
+ */
 @Composable
 private fun FinanceAmountRow(
     title: String,
@@ -602,6 +625,12 @@ private fun FinanceAmountRow(
     }
 }
 
+/*
+ * Formatter rupiah versi compact:
+ * - rb (ribu)
+ * - jt (juta)
+ * - M  (miliar)
+ */
 private fun formatCompactRupiah(
     amount: Double
 ): String {

@@ -2,6 +2,10 @@ package com.example.cashnova.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+/*
+ * Palet warna utama aplikasi CashNova.
+ * Dipakai lintas komponen, screen, dan MaterialTheme agar konsisten.
+ */
 val CashNovaBackground = Color(0xFFF7F8FB)
 val CashNovaSurface = Color(0xFFFFFFFF)
 val CashNovaDark = Color(0xFF1E1E1F)

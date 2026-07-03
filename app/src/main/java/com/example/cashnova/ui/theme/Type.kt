@@ -6,6 +6,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+/*
+ * Skala tipografi aplikasi.
+ * Menentukan hierarki teks agar konsisten di seluruh screen.
+ */
 val CashNovaTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,

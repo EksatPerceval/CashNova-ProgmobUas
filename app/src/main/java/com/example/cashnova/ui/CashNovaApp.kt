@@ -21,6 +21,10 @@ import com.example.cashnova.ui.screens.SavingsScreen
 import com.example.cashnova.ui.screens.SettingsScreen
 import com.example.cashnova.ui.screens.WalletScreen
 
+/*
+ * Kumpulan route navigation aplikasi.
+ * Dibuat terpusat agar konsisten dan menghindari typo string route.
+ */
 private object Routes {
     const val ONBOARDING = "onboarding"
     const val DASHBOARD = "dashboard"
@@ -30,13 +34,21 @@ private object Routes {
     const val ANALYTICS = "analytics"
 }
 
+/*
+ * Root composable aplikasi:
+ * - Mengamati uiState global dari ViewModel.
+ * - Menentukan start destination berdasarkan onboarding.
+ * - Menghubungkan setiap screen dengan callback ke ViewModel.
+ */
 @Composable
 fun CashNovaApp(
     viewModel: CashNovaViewModel = viewModel(),
     navController: NavHostController = rememberNavController()
 ) {
+    // State utama aplikasi; perubahan state akan memicu recomposition screen terkait.
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Jika onboarding sudah selesai, langsung ke dashboard; jika belum, tampilkan onboarding dulu.
     val startDestination = if (uiState.onboardingCompleted) {
         Routes.DASHBOARD
     } else {
@@ -75,6 +87,11 @@ fun CashNovaApp(
         }
     ) {
 
+        /*
+         * Onboarding:
+         * - Menandai onboarding selesai di state/persistence.
+         * - Menghapus onboarding dari back stack agar tidak kembali saat tombol back ditekan.
+         */
         composable(Routes.ONBOARDING) {
             OnboardingScreen(
                 onStart = {
@@ -89,6 +106,10 @@ fun CashNovaApp(
             )
         }
 
+        /*
+         * Dashboard:
+         * menampilkan ringkasan keuangan utama dan memberi akses cepat ke halaman lain.
+         */
         composable(Routes.DASHBOARD) {
             DashboardScreen(
                 state = uiState,
@@ -109,6 +130,7 @@ fun CashNovaApp(
                     navController.navigate(Routes.ANALYTICS)
                 },
 
+                // Aksi transaksi/category diteruskan ke ViewModel sebagai source of truth.
                 onAddTransaction = viewModel::addTransaction,
                 onAddCustomCategory = viewModel::addCustomCategory
             )

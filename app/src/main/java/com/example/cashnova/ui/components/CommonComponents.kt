@@ -64,6 +64,10 @@ import com.example.cashnova.ui.theme.CashNovaRed
 import com.example.cashnova.ui.theme.CashNovaYellow
 import com.example.cashnova.ui.util.formatMoney
 
+/*
+ * Header standar untuk screen yang memiliki tombol kembali.
+ * Slot `action` bersifat opsional untuk ikon aksi di sisi kanan.
+ */
 @Composable
 fun ScreenHeader(
     title: String,
@@ -98,6 +102,10 @@ fun ScreenHeader(
     }
 }
 
+/*
+ * Judul section reusable.
+ * `onSeeAll` opsional untuk kasus daftar dengan aksi "See All".
+ */
 @Composable
 fun SectionTitle(
     title: String,
@@ -126,6 +134,10 @@ fun SectionTitle(
     }
 }
 
+/*
+ * Kartu saldo utama pada dashboard/wallet.
+ * Menampilkan total balance dan nama wallet aktif.
+ */
 @Composable
 fun BalanceCard(
     balance: Double,
@@ -230,6 +242,10 @@ fun BalanceCard(
     }
 }
 
+/*
+ * Kartu ringkasan pemasukan vs pengeluaran.
+ * Dipakai sebagai insight cepat tanpa membuka halaman analytics.
+ */
 @Composable
 fun IncomeOutcomeCard(
     income: Double,
@@ -334,6 +350,9 @@ fun IncomeOutcomeCard(
     }
 }
 
+/*
+ * Kartu target tabungan versi compact untuk list/grid ringkas.
+ */
 @Composable
 fun SavingCompactCard(
     goal: SavingGoal,
@@ -396,6 +415,10 @@ fun SavingCompactCard(
     }
 }
 
+/*
+ * Kartu target tabungan versi besar.
+ * Seluruh card dapat ditekan untuk aksi setor, ikon delete untuk hapus target.
+ */
 @Composable
 fun SavingLargeCard(
     goal: SavingGoal,
@@ -500,6 +523,10 @@ fun SavingLargeCard(
     }
 }
 
+/*
+ * Baris transaksi reusable.
+ * Menampilkan ikon kategori, judul/subtitle, dan nominal dengan tanda +/−.
+ */
 @Composable
 fun TransactionRow(
     transaction: FinanceTransaction,
@@ -569,6 +596,10 @@ fun TransactionRow(
     }
 }
 
+/*
+ * Mapping color key target tabungan ke warna tema.
+ * Modulo menjaga hasil tetap stabil walau key di luar rentang.
+ */
 fun savingColor(key: Int): Color {
     return when (((key % 4) + 4) % 4) {
         0 -> CashNovaRed
@@ -578,6 +609,9 @@ fun savingColor(key: Int): Color {
     }
 }
 
+/*
+ * Menentukan ikon target tabungan dari judul (heuristic berbasis keyword).
+ */
 fun goalIcon(title: String): ImageVector {
     return when {
         title.contains("phone", ignoreCase = true) ||
@@ -593,6 +627,10 @@ fun goalIcon(title: String): ImageVector {
     }
 }
 
+/*
+ * Menentukan ikon transaksi berdasarkan title + category.
+ * Pendekatan keyword ini menjaga UI tetap informatif tanpa field ikon eksplisit di DB.
+ */
 private fun transactionIcon(transaction: FinanceTransaction): ImageVector {
     val source = "${transaction.title} ${transaction.category}"
 
@@ -612,6 +650,9 @@ private fun transactionIcon(transaction: FinanceTransaction): ImageVector {
     }
 }
 
+/*
+ * Menentukan warna ikon transaksi berdasarkan type/kategori utama.
+ */
 private fun transactionIconColor(transaction: FinanceTransaction): Color {
     return when {
         transaction.type == TransactionType.INCOME -> CashNovaGreen

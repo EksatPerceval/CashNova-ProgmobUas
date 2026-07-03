@@ -4,6 +4,12 @@ import com.example.cashnova.data.FinanceTransaction
 import com.example.cashnova.data.TransactionType
 import com.example.cashnova.data.local.entity.TransactionEntity
 
+/*
+ * Mapping dari entity database ke model domain.
+ *
+ * Aman terhadap data lama/invalid:
+ * - Jika field `type` tidak valid, default ke EXPENSE agar aplikasi tidak crash.
+ */
 fun TransactionEntity.toFinanceTransaction():
         FinanceTransaction {
 
@@ -26,6 +32,10 @@ fun TransactionEntity.toFinanceTransaction():
     )
 }
 
+/*
+ * Mapping dari model domain ke entity database.
+ * enum TransactionType disimpan sebagai String (`type.name`) di tabel transaksi.
+ */
 fun FinanceTransaction.toTransactionEntity():
         TransactionEntity {
 

@@ -37,6 +37,10 @@ import com.example.cashnova.data.Wallet
 import com.example.cashnova.ui.util.formatMoney
 import com.example.cashnova.ui.util.formatTransactionDate
 
+/*
+ * Dialog tambah transaksi (income/expense).
+ * Mendukung pemilihan kategori existing + penambahan kategori custom.
+ */
 @Composable
 fun AddTransactionDialog(
     categories: List<String>,
@@ -217,6 +221,10 @@ fun AddTransactionDialog(
     }
 }
 
+/*
+ * Dialog tambah wallet baru.
+ * Input: nama wallet + saldo awal.
+ */
 @Composable
 fun AddWalletDialog(
     onDismiss: () -> Unit,
@@ -266,6 +274,10 @@ fun AddWalletDialog(
     )
 }
 
+/*
+ * Dialog membuat target tabungan baru.
+ * Meminta nama target, nominal target, saldo awal, dan estimasi hari.
+ */
 @Composable
 fun AddSavingGoalDialog(
     onDismiss: () -> Unit,
@@ -368,6 +380,14 @@ fun AddSavingGoalDialog(
     )
 }
 
+/*
+ * Dialog setor dana ke target tabungan.
+ *
+ * Validasi utama:
+ * - nominal > 0
+ * - tidak melebihi sisa target
+ * - tidak melebihi saldo tersedia
+ */
 @Composable
 fun DepositDialog(
     goal: SavingGoal,
@@ -473,6 +493,10 @@ fun DepositDialog(
     )
 }
 
+/*
+ * Dialog detail transaksi.
+ * Menampilkan informasi ringkas dan menyediakan aksi hapus.
+ */
 @Composable
 fun TransactionDetailDialog(
     transaction: FinanceTransaction,

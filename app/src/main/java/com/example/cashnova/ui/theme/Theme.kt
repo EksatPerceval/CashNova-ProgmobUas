@@ -8,6 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.example.cashnova.data.ThemeMode
 
+/*
+ * Color scheme mode terang.
+ * Menjadi basis tampilan default saat dark mode tidak aktif.
+ */
 private val CashNovaLightColorScheme = lightColorScheme(
     primary = CashNovaRed,
     onPrimary = Color.White,
@@ -23,6 +27,10 @@ private val CashNovaLightColorScheme = lightColorScheme(
     error = CashNovaRed
 )
 
+/*
+ * Color scheme mode gelap.
+ * Digunakan saat user memilih DARK atau mengikuti system dark mode.
+ */
 private val CashNovaDarkColorScheme = darkColorScheme(
     primary = CashNovaRed,
     onPrimary = Color.White,
@@ -38,6 +46,14 @@ private val CashNovaDarkColorScheme = darkColorScheme(
     error = Color(0xFFCF6679)
 )
 
+/*
+ * Wrapper tema utama aplikasi.
+ *
+ * Prioritas pemilihan mode:
+ * - LIGHT  -> paksa terang
+ * - DARK   -> paksa gelap
+ * - SYSTEM -> mengikuti setting sistem
+ */
 @Composable
 fun CashNovaTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,

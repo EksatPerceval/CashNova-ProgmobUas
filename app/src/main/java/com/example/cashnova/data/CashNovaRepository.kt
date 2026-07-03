@@ -9,6 +9,14 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 
+/*
+ * Repository utama aplikasi.
+ *
+ * Tanggung jawab:
+ * 1) Menjembatani sumber data Room (transaksi) dan SharedPreferences (konfigurasi/profil/savings/wallet).
+ * 2) Menangani migrasi data transaksi lama (JSON di SharedPreferences) ke Room.
+ * 3) Menyediakan data demo awal saat first install/reset.
+ */
 class CashNovaRepository(
     context: Context
 ) {
@@ -486,6 +494,9 @@ class CashNovaRepository(
         }
     }
 
+    /*
+     * Serialisasi daftar wallet ke JSON agar bisa disimpan di SharedPreferences.
+     */
     private fun encodeWallets(wallets: List<Wallet>): String {
         val array = JSONArray()
         wallets.forEach { wallet ->
@@ -500,6 +511,10 @@ class CashNovaRepository(
         return array.toString()
     }
 
+    /*
+     * Deserialisasi daftar wallet dari JSON.
+     * Jika JSON kosong/blank, kembalikan list kosong agar caller bisa menentukan fallback wallet default.
+     */
     private fun decodeWallets(json: String): List<Wallet> {
         if (json.isBlank()) return emptyList()
         val array = JSONArray(json)
@@ -518,10 +533,16 @@ class CashNovaRepository(
         }
     }
 
+    /*
+     * Menyimpan kategori custom ke JSON array string.
+     */
     private fun encodeCustomCategories(categories: List<String>): String {
         return JSONArray(categories).toString()
     }
 
+    /*
+     * Membaca kategori custom dari JSON array string.
+     */
     private fun decodeCustomCategories(json: String): List<String> {
         if (json.isBlank()) return emptyList()
         val array = JSONArray(json)
