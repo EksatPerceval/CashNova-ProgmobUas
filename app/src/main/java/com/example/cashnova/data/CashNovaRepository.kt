@@ -79,12 +79,22 @@ class CashNovaRepository(
         }
 
         return runCatching {
+            val userJson = preferences.getString(KEY_CURRENT_USER, null)
+            val currentUser = if (!userJson.isNullOrBlank()) {
+                val obj = JSONObject(userJson)
+                User(obj.getString("username"), obj.getString("pin"))
+            } else {
+                null
+            }
+
             CashNovaUiState(
                 onboardingCompleted =
                     preferences.getBoolean(
                         KEY_ONBOARDING,
                         false
                     ),
+                currentUser = currentUser,
+                rememberMe = preferences.getBoolean(KEY_REMEMBER_ME, false),
 
                 profileName =
                     preferences.getString(
@@ -118,7 +128,7 @@ class CashNovaRepository(
                         "[]"
                     ).orEmpty()
                 ),
-                
+
                 wallets = decodeWallets(
                     preferences.getString(
                         KEY_WALLETS,
@@ -127,9 +137,9 @@ class CashNovaRepository(
                 ).ifEmpty {
                     listOf(Wallet(0L, "Main Wallet", DEFAULT_OPENING_BALANCE))
                 },
-                
+
                 selectedWalletId = preferences.getLong(KEY_SELECTED_WALLET_ID, 0L),
-                
+
                 customCategories = decodeCustomCategories(
                     preferences.getString(
                         KEY_CUSTOM_CATEGORIES,
@@ -154,11 +164,23 @@ class CashNovaRepository(
     fun savePreferences(
         state: CashNovaUiState
     ) {
+        val userJson = state.currentUser?.let { user ->
+            JSONObject().put("username", user.username).put("pin", user.pin).toString()
+        }
+
         preferences
             .edit()
             .putBoolean(
                 KEY_ONBOARDING,
                 state.onboardingCompleted
+            )
+            .putString(
+                KEY_CURRENT_USER,
+                userJson
+            )
+            .putBoolean(
+                KEY_REMEMBER_ME,
+                state.rememberMe
             )
             .putString(
                 KEY_PROFILE_NAME,
@@ -563,6 +585,8 @@ class CashNovaRepository(
         return CashNovaUiState(
             onboardingCompleted =
                 onboardingCompleted,
+            currentUser = null,
+            rememberMe = false,
 
             profileName =
                 DEFAULT_PROFILE_NAME,
@@ -767,6 +791,8 @@ class CashNovaRepository(
         private const val KEY_SELECTED_WALLET_ID = "selected_wallet_id"
         private const val KEY_CUSTOM_CATEGORIES = "custom_categories"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_CURRENT_USER = "current_user"
+        private const val KEY_REMEMBER_ME = "remember_me"
 
         /*
          * Nama key transaksi dari repository lama.

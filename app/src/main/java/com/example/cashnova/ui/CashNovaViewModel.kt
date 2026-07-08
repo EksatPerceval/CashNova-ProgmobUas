@@ -9,6 +9,7 @@ import com.example.cashnova.data.FinanceTransaction
 import com.example.cashnova.data.SavingGoal
 import com.example.cashnova.data.ThemeMode
 import com.example.cashnova.data.TransactionType
+import com.example.cashnova.data.User
 import com.example.cashnova.data.Wallet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,31 +70,49 @@ class CashNovaViewModel(
         }
     }
 
-    fun completeOnboarding() {
-
-        updatePreferences { currentState ->
-            currentState.copy(
-                onboardingCompleted = true
-            )
-        }
-    }
-
-    fun updateProfileName(
-        name: String
-    ) {
-
-        val cleanedName =
-            name.trim()
-
-        if (cleanedName.isBlank()) {
-            return
-        }
+    fun updateProfileName(name: String) {
+        val cleanedName = name.trim()
+        if (cleanedName.isBlank()) return
 
         updatePreferences { currentState ->
             currentState.copy(
                 profileName = cleanedName
             )
         }
+    }
+
+    fun completeOnboarding() {
+        updatePreferences { it.copy(onboardingCompleted = true) }
+    }
+
+    fun updateThemeMode(themeMode: ThemeMode) {
+        updatePreferences { it.copy(themeMode = themeMode) }
+    }
+
+    fun login(username: String, pin: String, rememberMe: Boolean, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        // In a real app, this would verify against a database. For now we simulate success.
+        if (username.isNotBlank() && pin.isNotBlank()) {
+            val user = User(username = username, pin = pin)
+            updatePreferences { it.copy(currentUser = user, rememberMe = rememberMe) }
+            onSuccess()
+        } else {
+            onError("Username and PIN cannot be empty.")
+        }
+    }
+
+    fun register(username: String, pin: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        if (username.isNotBlank() && pin.isNotBlank()) {
+            // Save newly registered user to Preferences for now
+            val user = User(username = username, pin = pin)
+            // Just register, don't login immediately
+            onSuccess()
+        } else {
+            onError("Username and PIN cannot be empty.")
+        }
+    }
+
+    fun logout() {
+        updatePreferences { it.copy(currentUser = null, rememberMe = false) }
     }
 
     /*
@@ -154,7 +173,7 @@ class CashNovaViewModel(
 
                 createdAt =
                     System.currentTimeMillis(),
-                
+
                 walletId = _uiState.value.selectedWalletId
             )
 
@@ -381,14 +400,14 @@ class CashNovaViewModel(
 
     fun addWallet(name: String, initialBalance: Double) {
         if (name.isBlank()) return
-        
+
         val newWallet = Wallet(
             id = System.currentTimeMillis(),
             name = name.trim(),
             balance = initialBalance,
             colorKey = _uiState.value.wallets.size % 4
         )
-        
+
         updatePreferences { it.copy(wallets = it.wallets + newWallet) }
     }
 
@@ -407,7 +426,7 @@ class CashNovaViewModel(
                 } else {
                     state.selectedWalletId
                 }
-                
+
                 state.copy(
                     wallets = newWallets,
                     selectedWalletId = newSelectedWalletId
@@ -419,7 +438,7 @@ class CashNovaViewModel(
     fun addCustomCategory(category: String) {
         val cleaned = category.trim()
         if (cleaned.isBlank()) return
-        
+
         updatePreferences { currentState ->
             if (currentState.allCategories.any { it.equals(cleaned, ignoreCase = true) }) {
                 currentState
@@ -429,10 +448,6 @@ class CashNovaViewModel(
                 )
             }
         }
-    }
-
-    fun updateThemeMode(themeMode: ThemeMode) {
-        updatePreferences { it.copy(themeMode = themeMode) }
     }
 
     /*

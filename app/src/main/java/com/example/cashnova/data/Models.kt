@@ -13,6 +13,14 @@ enum class TransactionType {
 }
 
 /*
+ * Model representasi User untuk fitur autentikasi.
+ */
+data class User(
+    val username: String,
+    val pin: String
+)
+
+/*
  * Opsi tema aplikasi yang disimpan pada preferences.
  */
 enum class ThemeMode {
@@ -84,6 +92,8 @@ data class EarningSource(
  */
 data class CashNovaUiState(
     val onboardingCompleted: Boolean = false,
+    val currentUser: User? = null,
+    val rememberMe: Boolean = false,
     val profileName: String = "Asep Resing",
     val openingBalance: Double = 22_000.40,
     val transactions: List<FinanceTransaction> = emptyList(),

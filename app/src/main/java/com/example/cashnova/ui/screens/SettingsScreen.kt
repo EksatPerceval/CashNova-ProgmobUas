@@ -42,7 +42,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onSaveName: (String) -> Unit,
     onResetData: () -> Unit,
-    onUpdateTheme: (ThemeMode) -> Unit
+    onUpdateTheme: (ThemeMode) -> Unit,
+    onLogout: () -> Unit
 ) {
     var name by remember(state.profileName) {
         mutableStateOf(state.profileName)
@@ -160,6 +161,16 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Reset Demo Data")
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Button(
+                        onClick = onLogout,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Logout")
                     }
                 }
             }
