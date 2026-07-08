@@ -348,6 +348,37 @@ class CashNovaRepository(
     }
 
     /*
+     * Mengosongkan data untuk akun pengguna baru.
+     */
+    suspend fun clearDataForNewUser(): CashNovaUiState {
+        transactionDao.deleteAllTransactions()
+        
+        val emptyState = CashNovaUiState(
+            onboardingCompleted = true,
+            currentUser = null,
+            rememberMe = false,
+            profileName = "New User",
+            openingBalance = 0.0,
+            transactions = emptyList(),
+            savings = emptyList(),
+            wallets = listOf(Wallet(0L, "Main Wallet", 0.0)),
+            selectedWalletId = 0L,
+            customCategories = emptyList(),
+            themeMode = ThemeMode.SYSTEM
+        )
+        savePreferences(emptyState)
+        return emptyState
+    }
+
+    fun getLastUsername(): String? {
+        return preferences.getString(KEY_LAST_USERNAME, null)
+    }
+
+    fun saveLastUsername(username: String) {
+        preferences.edit().putString(KEY_LAST_USERNAME, username).apply()
+    }
+
+    /*
      * Membaca transaksi dari versi penyimpanan lama.
      *
      * Fungsi ini hanya digunakan satu kali
@@ -793,6 +824,7 @@ class CashNovaRepository(
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_CURRENT_USER = "current_user"
         private const val KEY_REMEMBER_ME = "remember_me"
+        private const val KEY_LAST_USERNAME = "last_username"
 
         /*
          * Nama key transaksi dari repository lama.

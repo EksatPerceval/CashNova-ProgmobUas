@@ -93,8 +93,21 @@ class CashNovaViewModel(
         // In a real app, this would verify against a database. For now we simulate success.
         if (username.isNotBlank() && pin.isNotBlank()) {
             val user = User(username = username, pin = pin)
-            updatePreferences { it.copy(currentUser = user, rememberMe = rememberMe) }
-            onSuccess()
+            
+            viewModelScope.launch {
+                val previousUsername = repository.getLastUsername()
+                
+                if (previousUsername != null && previousUsername != username) {
+                    val clearedState = repository.clearDataForNewUser()
+                    _uiState.value = clearedState.copy(currentUser = user, rememberMe = rememberMe)
+                    repository.savePreferences(_uiState.value)
+                } else {
+                    updatePreferences { it.copy(currentUser = user, rememberMe = rememberMe) }
+                }
+                
+                repository.saveLastUsername(username)
+                onSuccess()
+            }
         } else {
             onError("Username and PIN cannot be empty.")
         }
