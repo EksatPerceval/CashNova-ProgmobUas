@@ -15,6 +15,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
+/*
+ * Layar login pengguna.
+ * Menangani input username dan PIN, opsi "Remember me", 
+ * serta navigasi ke halaman pendaftaran (Register).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(

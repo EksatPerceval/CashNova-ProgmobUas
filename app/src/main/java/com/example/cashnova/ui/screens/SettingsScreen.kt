@@ -36,6 +36,11 @@ import com.example.cashnova.data.ThemeMode
 import com.example.cashnova.ui.components.ScreenHeader
 import com.example.cashnova.ui.theme.CashNovaMuted
 
+/*
+ * Layar pengaturan aplikasi (Settings).
+ * Menampilkan opsi penggantian nama profil, pengaturan tema (Light/Dark/System),
+ * opsi untuk mereset data demo, serta tombol untuk logout.
+ */
 @Composable
 fun SettingsScreen(
     state: CashNovaUiState,

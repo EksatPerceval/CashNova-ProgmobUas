@@ -15,6 +15,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
+/*
+ * Layar pendaftaran pengguna (Register).
+ * Mengambil input username, PIN, dan konfirmasi PIN.
+ * Melakukan validasi kesamaan PIN sebelum memproses pendaftaran.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(

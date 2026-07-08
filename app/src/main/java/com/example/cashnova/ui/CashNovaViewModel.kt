@@ -70,6 +70,9 @@ class CashNovaViewModel(
         }
     }
 
+    /*
+     * Memperbarui nama profil pengguna.
+     */
     fun updateProfileName(name: String) {
         val cleanedName = name.trim()
         if (cleanedName.isBlank()) return
@@ -81,14 +84,26 @@ class CashNovaViewModel(
         }
     }
 
+    /*
+     * Menandai bahwa proses onboarding telah selesai,
+     * agar aplikasi tidak menampilkannya lagi pada sesi berikutnya.
+     */
     fun completeOnboarding() {
         updatePreferences { it.copy(onboardingCompleted = true) }
     }
 
+    /*
+     * Memperbarui preferensi tema aplikasi (Light/Dark/System).
+     */
     fun updateThemeMode(themeMode: ThemeMode) {
         updatePreferences { it.copy(themeMode = themeMode) }
     }
 
+    /*
+     * Menangani proses login pengguna.
+     * Jika pengguna baru masuk (berbeda dari yang sebelumnya),
+     * maka data transaksi/state lama akan dibersihkan terlebih dahulu.
+     */
     fun login(username: String, pin: String, rememberMe: Boolean, onSuccess: () -> Unit, onError: (String) -> Unit) {
         // In a real app, this would verify against a database. For now we simulate success.
         if (username.isNotBlank() && pin.isNotBlank()) {
@@ -113,6 +128,10 @@ class CashNovaViewModel(
         }
     }
 
+    /*
+     * Menangani pendaftaran akun baru.
+     * Secara lokal akan langsung menyimpan user ini.
+     */
     fun register(username: String, pin: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         if (username.isNotBlank() && pin.isNotBlank()) {
             // Save newly registered user to Preferences for now
@@ -124,6 +143,10 @@ class CashNovaViewModel(
         }
     }
 
+    /*
+     * Melakukan logout dengan cara menghapus sesi currentUser 
+     * dari state dan SharedPreferences, serta menonaktifkan rememberMe.
+     */
     fun logout() {
         updatePreferences { it.copy(currentUser = null, rememberMe = false) }
     }
