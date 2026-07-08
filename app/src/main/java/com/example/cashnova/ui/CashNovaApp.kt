@@ -41,11 +41,11 @@ fun CashNovaApp(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Menentukan layar awal berdasarkan status onboarding dan login
+    // Menentukan layar awal. Jika user sudah login (remember me), langsung ke Dashboard.
+    // Jika belum login, selalu tampilkan Onboarding (sebagai layar Welcome) sebelum Login.
     val startDestination = when {
-        !uiState.onboardingCompleted -> Routes.ONBOARDING
-        uiState.currentUser == null -> Routes.LOGIN
-        else -> Routes.DASHBOARD
+        uiState.currentUser != null -> Routes.DASHBOARD
+        else -> Routes.ONBOARDING
     }
 
     // Navigasi otomatis jika status login berubah (misal: saat startup mendeteksi sesi lama)
