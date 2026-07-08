@@ -1,20 +1,34 @@
 package com.example.cashnova.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /*
  * Entity Room untuk tabel "transactions".
- *
- * Catatan desain:
- * - type disimpan sebagai String agar sederhana saat serialisasi DB.
- * - Mapping ke enum domain (TransactionType) ditangani di layer mapper.
+ * Setiap transaksi terhubung ke wallet dan pengguna tertentu.
+ * Jika wallet dihapus, transaksi terkait juga ikut dihapus (CASCADE).
  */
-@Entity(tableName = "transactions")
+@Entity(
+    tableName = "transactions",
+    foreignKeys = [
+        ForeignKey(
+            entity = WalletEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["walletId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("walletId"), Index("username")]
+)
 data class TransactionEntity(
 
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
+
+    // Username pengguna pemilik transaksi ini (untuk isolasi data multi-user).
+    val username: String = "",
 
     // Judul transaksi (contoh: "Gaji Bulanan", "Belanja Harian").
     val title: String,
@@ -41,6 +55,7 @@ data class TransactionEntity(
      */
     val createdAt: Long,
 
-    // Relasi sederhana ke wallet aktif/asal transaksi.
+    // Relasi ke wallet asal transaksi.
     val walletId: Long = 0L
 )
+

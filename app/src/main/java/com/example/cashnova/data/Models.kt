@@ -94,26 +94,24 @@ data class CashNovaUiState(
     val onboardingCompleted: Boolean = false,
     val currentUser: User? = null,
     val rememberMe: Boolean = false,
-    val profileName: String = "Asep Resing",
-    val openingBalance: Double = 22_000.40,
+    val profileName: String = "User",
     val transactions: List<FinanceTransaction> = emptyList(),
     val savings: List<SavingGoal> = emptyList(),
-    val wallets: List<Wallet> = listOf(Wallet(0L, "Main Wallet", 0.0)),
+    val wallets: List<Wallet> = emptyList(),
     val selectedWalletId: Long = 0L,
+    /*
+     * customCategories diisi dari Flow Room (kategori default + custom pengguna).
+     * Tidak lagi memerlukan hardcoded defaultCategories.
+     */
     val customCategories: List<String> = emptyList(),
     val themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
     /*
-     * Kategori bawaan aplikasi.
-     * Digabungkan dengan customCategories agar dialog input transaksi selalu menampilkan semua opsi.
-     */
-    val defaultCategories = listOf("Salary", "Freelance", "Food", "Transport", "Shopping", "Utility", "Subscription", "Payment", "Saving", "Other")
-
-    /*
-     * Seluruh kategori unik (bawaan + custom).
+     * Seluruh kategori unik yang bisa digunakan pengguna.
+     * Datanya sudah di-merge oleh query Room (CategoryDao).
      */
     val allCategories: List<String>
-        get() = (defaultCategories + customCategories).distinct()
+        get() = customCategories.distinct()
 
     /*
      * Wallet aktif yang dipilih pengguna.

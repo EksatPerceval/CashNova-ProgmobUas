@@ -18,7 +18,8 @@ import kotlinx.coroutines.launch
 /*
  * Layar pendaftaran pengguna (Register).
  * Mengambil input username, PIN, dan konfirmasi PIN.
- * Melakukan validasi kesamaan PIN sebelum memproses pendaftaran.
+ * Melakukan validasi kesamaan PIN sebelum memproses pendaftaran ke database Room.
+ * Jika username sudah terdaftar, error akan ditampilkan lewat Snackbar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,9 +77,9 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             OutlinedTextField(
                 value = pin,
                 onValueChange = { pin = it },
@@ -105,15 +106,15 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
-                    if (pin == confirmPin) {
-                        onRegisterAction(username, pin, onRegisterSuccess) { err ->
-                            scope.launch {
-                                snackbarHostState.showSnackbar(err)
-                            }
-                        }
-                    } else {
+                    if (pin != confirmPin) {
+                        // Validasi lokal: PIN tidak sama
                         scope.launch {
                             snackbarHostState.showSnackbar("PIN and Confirm PIN must match")
+                        }
+                    } else {
+                        // Kirim ke ViewModel yang akan mendaftarkan ke Room DB
+                        onRegisterAction(username, pin, onRegisterSuccess) { err ->
+                            scope.launch { snackbarHostState.showSnackbar(err) }
                         }
                     }
                 },

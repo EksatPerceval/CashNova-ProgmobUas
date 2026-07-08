@@ -4,29 +4,57 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.cashnova.data.local.dao.CategoryDao
+import com.example.cashnova.data.local.dao.SavingGoalDao
 import com.example.cashnova.data.local.dao.TransactionDao
+import com.example.cashnova.data.local.dao.UserDao
+import com.example.cashnova.data.local.dao.WalletDao
+import com.example.cashnova.data.local.entity.CategoryEntity
+import com.example.cashnova.data.local.entity.SavingGoalEntity
 import com.example.cashnova.data.local.entity.TransactionEntity
+import com.example.cashnova.data.local.entity.UserEntity
+import com.example.cashnova.data.local.entity.WalletEntity
 
 /*
  * Definisi Room Database utama untuk aplikasi CashNova.
  *
- * Catatan:
- * - Saat ini hanya memiliki satu entity utama: TransactionEntity.
- * - Version mengikuti evolusi skema Room (lihat folder app/schemas).
+ * Perubahan skema (versi naik) menggunakan fallbackToDestructiveMigration
+ * yang akan menghapus dan membuat ulang semua tabel secara otomatis.
+ *
+ * Tabel yang terdaftar:
+ * - users          : Data akun pengguna
+ * - wallets        : Dompet/rekening per pengguna
+ * - transactions   : Riwayat transaksi keuangan
+ * - saving_goals   : Target tabungan per pengguna
+ * - categories     : Kategori transaksi (default + custom)
  */
 @Database(
     entities = [
-        TransactionEntity::class
+        UserEntity::class,
+        WalletEntity::class,
+        TransactionEntity::class,
+        SavingGoalEntity::class,
+        CategoryEntity::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = true
 )
 abstract class CashNovaDatabase : RoomDatabase() {
 
-    /*
-     * Satu-satunya DAO yang dibutuhkan saat ini untuk operasi transaksi.
-     */
+    /* DAO untuk tabel users. */
+    abstract fun userDao(): UserDao
+
+    /* DAO untuk tabel wallets. */
+    abstract fun walletDao(): WalletDao
+
+    /* DAO untuk tabel transactions. */
     abstract fun transactionDao(): TransactionDao
+
+    /* DAO untuk tabel saving_goals. */
+    abstract fun savingGoalDao(): SavingGoalDao
+
+    /* DAO untuk tabel categories. */
+    abstract fun categoryDao(): CategoryDao
 
     companion object {
 
@@ -55,10 +83,8 @@ abstract class CashNovaDatabase : RoomDatabase() {
                     /*
                      * Fallback ini akan mereset tabel saat versi schema berubah
                      * dan migration spesifik belum disediakan.
-                     * Cocok untuk fase demo/prototipe, namun pada production
-                     * biasanya diganti migration terarah agar data tidak hilang.
                      */
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(true)
                     .build()
 
                 INSTANCE = instance
@@ -67,7 +93,6 @@ abstract class CashNovaDatabase : RoomDatabase() {
             }
         }
 
-        private const val DATABASE_NAME =
-            "cashnova_database"
+        private const val DATABASE_NAME = "cashnova_database"
     }
 }

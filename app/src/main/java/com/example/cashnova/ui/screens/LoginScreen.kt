@@ -1,13 +1,11 @@
 package com.example.cashnova.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -17,8 +15,9 @@ import kotlinx.coroutines.launch
 
 /*
  * Layar login pengguna.
- * Menangani input username dan PIN, opsi "Remember me", 
+ * Menangani input username dan PIN, opsi "Remember me",
  * serta navigasi ke halaman pendaftaran (Register).
+ * Kredensial divalidasi langsung ke database Room melalui ViewModel.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +29,6 @@ fun LoginScreen(
     var username by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -67,9 +65,9 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             OutlinedTextField(
                 value = pin,
                 onValueChange = { pin = it },
@@ -97,10 +95,9 @@ fun LoginScreen(
 
             Button(
                 onClick = {
+                    // Kirim ke ViewModel yang akan memvalidasi ke Room DB
                     onLoginAction(username, pin, rememberMe, onLoginSuccess) { err ->
-                        scope.launch {
-                            snackbarHostState.showSnackbar(err)
-                        }
+                        scope.launch { snackbarHostState.showSnackbar(err) }
                     }
                 },
                 modifier = Modifier

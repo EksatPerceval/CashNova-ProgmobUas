@@ -2,844 +2,341 @@ package com.example.cashnova.data
 
 import android.content.Context
 import com.example.cashnova.data.local.CashNovaDatabase
+import com.example.cashnova.data.local.entity.CategoryEntity
+import com.example.cashnova.data.local.entity.SavingGoalEntity
+import com.example.cashnova.data.local.entity.UserEntity
+import com.example.cashnova.data.local.entity.WalletEntity
 import com.example.cashnova.data.local.mapper.toFinanceTransaction
+import com.example.cashnova.data.local.mapper.toSavingGoal
+import com.example.cashnova.data.local.mapper.toSavingGoalEntity
 import com.example.cashnova.data.local.mapper.toTransactionEntity
+import com.example.cashnova.data.local.mapper.toWallet
+import com.example.cashnova.data.local.mapper.toWalletEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import org.json.JSONArray
-import org.json.JSONObject
 
 /*
  * Repository utama aplikasi.
  *
  * Tanggung jawab:
- * 1) Menjembatani sumber data Room (transaksi) dan SharedPreferences (konfigurasi/profil/savings/wallet).
- * 2) Menangani migrasi data transaksi lama (JSON di SharedPreferences) ke Room.
- * 3) Menyediakan data demo awal saat first install/reset.
+ * 1) Menjembatani seluruh sumber data Room (Transactions, Wallets, Savings, Categories, Users).
+ * 2) Menyediakan data demo awal saat first install/reset.
+ * 3) Mengelola sesi login sederhana via SharedPreferences.
  */
 class CashNovaRepository(
     context: Context
 ) {
 
     /*
-     * SharedPreferences masih digunakan untuk:
+     * SharedPreferences hanya digunakan untuk:
      * - status onboarding;
-     * - nama pengguna;
-     * - saldo pembuka;
-     * - target tabungan.
-     *
-     * Transaksi dipindahkan ke Room.
+     * - sesi login (remember_me, current_user);
+     * - last_username untuk mendeteksi pergantian akun.
+     * Semua data keuangan (Wallet, Savings, Categories) kini di Room.
      */
     private val preferences = context.getSharedPreferences(
         PREFS_NAME,
         Context.MODE_PRIVATE
     )
 
-    /*
-     * Mengambil DAO dari Room Database.
-     */
-    private val transactionDao =
-        CashNovaDatabase
-            .getDatabase(context)
-            .transactionDao()
+    private val db = CashNovaDatabase.getDatabase(context)
+    private val transactionDao = db.transactionDao()
+    private val walletDao = db.walletDao()
+    private val savingGoalDao = db.savingGoalDao()
+    private val categoryDao = db.categoryDao()
+    private val userDao = db.userDao()
+
+    /* ============================================================
+     * Auth
+     * ============================================================ */
 
     /*
-     * Mengamati seluruh transaksi dari Room.
-     *
-     * Ketika tabel transaksi berubah,
-     * Flow akan mengirim daftar terbaru.
+     * Mendaftarkan akun baru ke dalam Room.
+     * Mengembalikan true jika berhasil, false jika username sudah ada.
      */
-    fun observeTransactions(): Flow<List<FinanceTransaction>> {
-        return transactionDao
-            .observeAllTransactions()
-            .map { entities ->
-                entities.map { entity ->
-                    entity.toFinanceTransaction()
-                }
-            }
-    }
+    suspend fun registerUser(username: String, pin: String, profileName: String): Boolean {
+        val existing = userDao.getUserByUsername(username)
+        if (existing != null) return false
 
-    /*
-     * Memuat data yang masih tersimpan
-     * di SharedPreferences.
-     *
-     * Daftar transaksi dibuat kosong karena
-     * transaksi akan dimuat dari Room melalui Flow.
-     */
-    fun loadPreferencesState(): CashNovaUiState {
-
-        if (!preferences.contains(KEY_SAVINGS)) {
-            val initialState = demoPreferencesState(
-                onboardingCompleted = false
-            )
-
-            savePreferences(initialState)
-
-            return initialState
-        }
-
-        return runCatching {
-            val userJson = preferences.getString(KEY_CURRENT_USER, null)
-            val currentUser = if (!userJson.isNullOrBlank()) {
-                val obj = JSONObject(userJson)
-                User(obj.getString("username"), obj.getString("pin"))
-            } else {
-                null
-            }
-
-            CashNovaUiState(
-                onboardingCompleted =
-                    preferences.getBoolean(
-                        KEY_ONBOARDING,
-                        false
-                    ),
-                currentUser = currentUser,
-                rememberMe = preferences.getBoolean(KEY_REMEMBER_ME, false),
-
-                profileName =
-                    preferences.getString(
-                        KEY_PROFILE_NAME,
-                        DEFAULT_PROFILE_NAME
-                    )
-                        .orEmpty()
-                        .ifBlank {
-                            DEFAULT_PROFILE_NAME
-                        },
-
-                openingBalance =
-                    preferences.getLong(
-                        KEY_OPENING_BALANCE,
-                        java.lang.Double.doubleToRawLongBits(
-                            DEFAULT_OPENING_BALANCE
-                        )
-                    ).let { bits ->
-                        java.lang.Double.longBitsToDouble(bits)
-                    },
-
-                /*
-                 * Transaksi tidak lagi dibaca
-                 * dari SharedPreferences.
-                 */
-                transactions = emptyList(),
-
-                savings = decodeSavings(
-                    preferences.getString(
-                        KEY_SAVINGS,
-                        "[]"
-                    ).orEmpty()
-                ),
-
-                wallets = decodeWallets(
-                    preferences.getString(
-                        KEY_WALLETS,
-                        "[]"
-                    ).orEmpty()
-                ).ifEmpty {
-                    listOf(Wallet(0L, "Main Wallet", DEFAULT_OPENING_BALANCE))
-                },
-
-                selectedWalletId = preferences.getLong(KEY_SELECTED_WALLET_ID, 0L),
-
-                customCategories = decodeCustomCategories(
-                    preferences.getString(
-                        KEY_CUSTOM_CATEGORIES,
-                        "[]"
-                    ).orEmpty()
-                ),
-
-                themeMode = ThemeMode.valueOf(
-                    preferences.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
-                )
-            )
-        }.getOrElse {
-            demoPreferencesState(
-                onboardingCompleted = false
-            )
-        }
-    }
-
-    /*
-     * Menyimpan data selain transaksi.
-     */
-    fun savePreferences(
-        state: CashNovaUiState
-    ) {
-        val userJson = state.currentUser?.let { user ->
-            JSONObject().put("username", user.username).put("pin", user.pin).toString()
-        }
-
-        preferences
-            .edit()
-            .putBoolean(
-                KEY_ONBOARDING,
-                state.onboardingCompleted
-            )
-            .putString(
-                KEY_CURRENT_USER,
-                userJson
-            )
-            .putBoolean(
-                KEY_REMEMBER_ME,
-                state.rememberMe
-            )
-            .putString(
-                KEY_PROFILE_NAME,
-                state.profileName
-            )
-            .putLong(
-                KEY_OPENING_BALANCE,
-                java.lang.Double.doubleToRawLongBits(
-                    state.openingBalance
-                )
-            )
-            .putString(
-                KEY_SAVINGS,
-                encodeSavings(state.savings)
-            )
-            .putString(
-                KEY_WALLETS,
-                encodeWallets(state.wallets)
-            )
-            .putLong(
-                KEY_SELECTED_WALLET_ID,
-                state.selectedWalletId
-            )
-            .putString(
-                KEY_CUSTOM_CATEGORIES,
-                encodeCustomCategories(state.customCategories)
-            )
-            .putString(
-                KEY_THEME_MODE,
-                state.themeMode.name
-            )
-            .apply()
-    }
-
-    /*
-     * Menyiapkan transaksi Room pada penggunaan pertama.
-     *
-     * Apabila versi aplikasi lama memiliki transaksi
-     * di SharedPreferences, transaksi tersebut dipindahkan
-     * terlebih dahulu ke Room.
-     */
-    suspend fun initializeTransactions() {
-
-        val roomAlreadyInitialized =
-            preferences.getBoolean(
-                KEY_ROOM_INITIALIZED,
-                false
-            )
-
-        if (roomAlreadyInitialized) {
-            return
-        }
-
-        val transactionCount =
-            transactionDao.countTransactions()
-
-        if (transactionCount == 0) {
-
-            val legacyTransactions =
-                loadLegacyTransactions()
-
-            val initialTransactions =
-                legacyTransactions.ifEmpty {
-                    demoTransactions()
-                }
-
-            initialTransactions.forEach { transaction ->
-                transactionDao.insertTransaction(
-                    transaction.toTransactionEntity()
-                )
-            }
-        }
-
-        /*
-         * Setelah migrasi selesai, transaksi JSON lama
-         * dihapus agar tidak ada dua sumber data.
-         */
-        preferences
-            .edit()
-            .remove(KEY_LEGACY_TRANSACTIONS)
-            .putBoolean(
-                KEY_ROOM_INITIALIZED,
-                true
-            )
-            .apply()
-    }
-
-    /*
-     * Menambahkan transaksi baru.
-     */
-    suspend fun insertTransaction(
-        transaction: FinanceTransaction
-    ): Long {
-        return transactionDao.insertTransaction(
-            transaction.toTransactionEntity()
+        val inserted = userDao.insertUser(
+            UserEntity(username = username, pin = pin, profileName = profileName)
         )
+
+        if (inserted > 0) {
+            // Inisialisasi wallet default untuk pengguna baru.
+            val defaultWalletId = walletDao.insertWallet(
+                WalletEntity(username = username, name = "Main Wallet", balance = 0.0, colorKey = 0)
+            )
+            // Inisialisasi kategori default untuk pengguna baru.
+            seedDefaultCategories(username)
+        }
+        return inserted > 0
+    }
+
+    /*
+     * Memvalidasi kredensial login.
+     * Mengembalikan UserEntity jika valid, null jika tidak.
+     */
+    suspend fun loginUser(username: String, pin: String): UserEntity? {
+        return userDao.getUserByCredentials(username, pin)
+    }
+
+    /*
+     * Menyimpan sesi login ke SharedPreferences.
+     */
+    fun saveSession(username: String, profileName: String, rememberMe: Boolean, themeMode: ThemeMode) {
+        preferences.edit()
+            .putString(KEY_CURRENT_USERNAME, username)
+            .putString(KEY_PROFILE_NAME, username)
+            .putBoolean(KEY_REMEMBER_ME, rememberMe)
+            .putString(KEY_THEME_MODE, themeMode.name)
+            .putString(KEY_LAST_USERNAME, username)
+            .apply()
+    }
+
+    /*
+     * Menghapus sesi login dari SharedPreferences.
+     */
+    fun clearSession() {
+        preferences.edit()
+            .remove(KEY_CURRENT_USERNAME)
+            .remove(KEY_REMEMBER_ME)
+            .apply()
+    }
+
+    /*
+     * Memuat state awal dari SharedPreferences dan Room saat aplikasi dimulai.
+     */
+    fun loadInitialState(): CashNovaUiState {
+        val onboardingDone = preferences.getBoolean(KEY_ONBOARDING, false)
+        val rememberMe = preferences.getBoolean(KEY_REMEMBER_ME, false)
+        val currentUsername = if (rememberMe) preferences.getString(KEY_CURRENT_USERNAME, null) else null
+        val themeMode = ThemeMode.valueOf(
+            preferences.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
+        )
+
+        return if (currentUsername != null) {
+            CashNovaUiState(
+                onboardingCompleted = onboardingDone,
+                currentUser = User(username = currentUsername, pin = ""),
+                rememberMe = rememberMe,
+                themeMode = themeMode,
+                profileName = preferences.getString(KEY_PROFILE_NAME, currentUsername) ?: currentUsername
+            )
+        } else {
+            CashNovaUiState(
+                onboardingCompleted = onboardingDone,
+                themeMode = themeMode
+            )
+        }
+    }
+
+    /*
+     * Mendapatkan username terakhir yang login (untuk deteksi pergantian akun).
+     */
+    fun getLastUsername(): String? = preferences.getString(KEY_LAST_USERNAME, null)
+
+    /*
+     * Menyimpan username terakhir yang login.
+     */
+    fun saveLastUsername(username: String) {
+        preferences.edit().putString(KEY_LAST_USERNAME, username).apply()
+    }
+
+    /* ============================================================
+     * Onboarding & Theme
+     * ============================================================ */
+
+    fun completeOnboarding() {
+        preferences.edit().putBoolean(KEY_ONBOARDING, true).apply()
+    }
+
+    fun saveThemeMode(themeMode: ThemeMode) {
+        preferences.edit().putString(KEY_THEME_MODE, themeMode.name).apply()
+    }
+
+    fun saveProfileName(username: String, profileName: String) {
+        preferences.edit().putString(KEY_PROFILE_NAME, profileName).apply()
+    }
+
+    /* ============================================================
+     * Transactions
+     * ============================================================ */
+
+    /*
+     * Mengamati transaksi milik pengguna aktif secara reaktif.
+     */
+    fun observeTransactionsByUser(username: String): Flow<List<FinanceTransaction>> {
+        return transactionDao.observeTransactionsByUser(username).map { list ->
+            list.map { it.toFinanceTransaction() }
+        }
+    }
+
+    /*
+     * Menambahkan transaksi baru ke Room.
+     */
+    suspend fun insertTransaction(transaction: FinanceTransaction, username: String): Long {
+        return transactionDao.insertTransaction(transaction.toTransactionEntity(username))
     }
 
     /*
      * Memperbarui transaksi.
      */
-    suspend fun updateTransaction(
-        transaction: FinanceTransaction
-    ) {
-        transactionDao.updateTransaction(
-            transaction.toTransactionEntity()
-        )
+    suspend fun updateTransaction(transaction: FinanceTransaction, username: String) {
+        transactionDao.updateTransaction(transaction.toTransactionEntity(username))
     }
 
     /*
      * Menghapus transaksi berdasarkan ID.
      */
-    suspend fun deleteTransaction(
-        transactionId: Long
-    ) {
-        transactionDao.deleteTransactionById(
-            transactionId
-        )
+    suspend fun deleteTransaction(transactionId: Long) {
+        transactionDao.deleteTransactionById(transactionId)
     }
 
     /*
-     * Menghapus transaksi berdasarkan walletId.
+     * Menghapus semua transaksi milik satu pengguna.
      */
-    suspend fun deleteTransactionsByWalletId(walletId: Long) {
-        transactionDao.deleteTransactionsByWalletId(walletId)
+    suspend fun deleteAllTransactionsByUser(username: String) {
+        transactionDao.deleteAllTransactionsByUser(username)
+    }
+
+    /* ============================================================
+     * Wallets
+     * ============================================================ */
+
+    /*
+     * Mengamati daftar wallet milik pengguna aktif secara reaktif.
+     */
+    fun observeWalletsByUser(username: String): Flow<List<Wallet>> {
+        return walletDao.observeWalletsByUser(username).map { list ->
+            list.map { it.toWallet() }
+        }
     }
 
     /*
-     * Menghapus seluruh transaksi.
+     * Menambahkan wallet baru.
+     * Mengembalikan ID wallet baru.
      */
-    suspend fun deleteAllTransactions() {
-        transactionDao.deleteAllTransactions()
+    suspend fun insertWallet(wallet: Wallet, username: String): Long {
+        return walletDao.insertWallet(wallet.toWalletEntity(username))
     }
 
     /*
-     * Mengembalikan seluruh data aplikasi
-     * ke data demo awal.
+     * Menghapus wallet beserta semua transaksi terkait (via CASCADE di DB).
      */
-    suspend fun resetAllData(): CashNovaUiState {
+    suspend fun deleteWallet(walletId: Long) {
+        walletDao.deleteWalletById(walletId)
+    }
 
-        transactionDao.deleteAllTransactions()
+    /*
+     * Mengecek apakah pengguna masih punya lebih dari satu wallet.
+     */
+    suspend fun countWalletsByUser(username: String): Int {
+        return walletDao.countWalletsByUser(username)
+    }
 
-        demoTransactions().forEach { transaction ->
-            transactionDao.insertTransaction(
-                transaction.toTransactionEntity()
+    /* ============================================================
+     * Saving Goals
+     * ============================================================ */
+
+    /*
+     * Mengamati daftar target tabungan milik pengguna aktif secara reaktif.
+     */
+    fun observeSavingsByUser(username: String): Flow<List<SavingGoal>> {
+        return savingGoalDao.observeSavingsByUser(username).map { list ->
+            list.map { it.toSavingGoal() }
+        }
+    }
+
+    /*
+     * Menambahkan target tabungan baru.
+     */
+    suspend fun insertSavingGoal(goal: SavingGoal, username: String): Long {
+        return savingGoalDao.insertSavingGoal(goal.toSavingGoalEntity(username))
+    }
+
+    /*
+     * Memperbarui target tabungan (misalnya currentAmount setelah deposit).
+     */
+    suspend fun updateSavingGoal(goal: SavingGoal, username: String) {
+        savingGoalDao.updateSavingGoal(goal.toSavingGoalEntity(username))
+    }
+
+    /*
+     * Menghapus target tabungan berdasarkan ID.
+     */
+    suspend fun deleteSavingGoal(goalId: Long) {
+        savingGoalDao.deleteSavingGoalById(goalId)
+    }
+
+    /* ============================================================
+     * Categories
+     * ============================================================ */
+
+    /*
+     * Mengamati seluruh kategori (default + custom) untuk pengguna aktif.
+     */
+    fun observeCategoriesByUser(username: String): Flow<List<String>> {
+        return categoryDao.observeCategoriesByUser(username).map { list ->
+            list.map { it.name }
+        }
+    }
+
+    /*
+     * Menambahkan kategori custom baru untuk pengguna.
+     * Jika sudah ada, tidak akan menyisipkan duplikat.
+     */
+    suspend fun insertCustomCategory(name: String, username: String): Boolean {
+        val count = categoryDao.countByNameForUser(name, username)
+        if (count > 0) return false
+        return categoryDao.insertCategory(
+            CategoryEntity(name = name, username = username)
+        ) > 0
+    }
+
+    /*
+     * Menyemai kategori default ke tabel categories untuk pengguna baru.
+     */
+    suspend fun seedDefaultCategories(username: String) {
+        DEFAULT_CATEGORIES.forEach { categoryName ->
+            categoryDao.insertCategory(
+                CategoryEntity(name = categoryName, username = "", type = "ALL")
             )
         }
-
-        val resetState =
-            demoPreferencesState(
-                onboardingCompleted = true
-            )
-
-        savePreferences(resetState)
-
-        preferences
-            .edit()
-            .putBoolean(
-                KEY_ROOM_INITIALIZED,
-                true
-            )
-            .apply()
-
-        return resetState
     }
+
+    /* ============================================================
+     * Legacy / Initialization
+     * ============================================================ */
 
     /*
-     * Mengosongkan data untuk akun pengguna baru.
+     * Dijalankan sekali saat startup setelah login untuk memastikan
+     * wallet default ada (dalam kasus data terhapus).
      */
-    suspend fun clearDataForNewUser(): CashNovaUiState {
-        transactionDao.deleteAllTransactions()
-        
-        val emptyState = CashNovaUiState(
-            onboardingCompleted = true,
-            currentUser = null,
-            rememberMe = false,
-            profileName = "New User",
-            openingBalance = 0.0,
-            transactions = emptyList(),
-            savings = emptyList(),
-            wallets = listOf(Wallet(0L, "Main Wallet", 0.0)),
-            selectedWalletId = 0L,
-            customCategories = emptyList(),
-            themeMode = ThemeMode.SYSTEM
-        )
-        savePreferences(emptyState)
-        return emptyState
-    }
-
-    fun getLastUsername(): String? {
-        return preferences.getString(KEY_LAST_USERNAME, null)
-    }
-
-    fun saveLastUsername(username: String) {
-        preferences.edit().putString(KEY_LAST_USERNAME, username).apply()
-    }
-
-    /*
-     * Membaca transaksi dari versi penyimpanan lama.
-     *
-     * Fungsi ini hanya digunakan satu kali
-     * ketika migrasi ke Room.
-     */
-    private fun loadLegacyTransactions():
-            List<FinanceTransaction> {
-
-        val legacyJson =
-            preferences.getString(
-                KEY_LEGACY_TRANSACTIONS,
-                null
-            ) ?: return emptyList()
-
-        return runCatching {
-            decodeLegacyTransactions(
-                legacyJson
-            )
-        }.getOrElse {
-            emptyList()
-        }
-    }
-
-    private fun decodeLegacyTransactions(
-        json: String
-    ): List<FinanceTransaction> {
-
-        val array = JSONArray(json)
-
-        return buildList {
-
-            for (index in 0 until array.length()) {
-
-                val item =
-                    array.getJSONObject(index)
-
-                val transactionType =
-                    runCatching {
-                        TransactionType.valueOf(
-                            item.getString("type")
-                        )
-                    }.getOrDefault(
-                        TransactionType.EXPENSE
-                    )
-
-                add(
-                    FinanceTransaction(
-                        id = item.optLong(
-                            "id",
-                            0L
-                        ),
-                        title = item.optString(
-                            "title",
-                            "Transaction"
-                        ),
-                        subtitle = item.optString(
-                            "subtitle",
-                            ""
-                        ),
-                        amount = item.optDouble(
-                            "amount",
-                            0.0
-                        ),
-                        type = transactionType,
-                        category = item.optString(
-                            "category",
-                            "Other"
-                        ),
-                        createdAt = item.optLong(
-                            "createdAt",
-                            System.currentTimeMillis()
-                        ),
-                        walletId = 0L
-                    )
-                )
-            }
-        }
-    }
-
-    /*
-     * Mengubah daftar target tabungan menjadi JSON.
-     */
-    private fun encodeSavings(
-        items: List<SavingGoal>
-    ): String {
-
-        val array = JSONArray()
-
-        items.forEach { item ->
-
-            val jsonObject =
-                JSONObject()
-                    .put(
-                        "id",
-                        item.id
-                    )
-                    .put(
-                        "title",
-                        item.title
-                    )
-                    .put(
-                        "currentAmount",
-                        item.currentAmount
-                    )
-                    .put(
-                        "targetAmount",
-                        item.targetAmount
-                    )
-                    .put(
-                        "daysLeft",
-                        item.daysLeft
-                    )
-                    .put(
-                        "colorKey",
-                        item.colorKey
-                    )
-
-            array.put(jsonObject)
-        }
-
-        return array.toString()
-    }
-
-    /*
-     * Mengubah JSON menjadi daftar target tabungan.
-     */
-    private fun decodeSavings(
-        json: String
-    ): List<SavingGoal> {
-
-        val array = JSONArray(json)
-
-        return buildList {
-
-            for (index in 0 until array.length()) {
-
-                val item =
-                    array.getJSONObject(index)
-
-                add(
-                    SavingGoal(
-                        id = item.getLong("id"),
-                        title = item.getString(
-                            "title"
-                        ),
-                        currentAmount =
-                            item.getDouble(
-                                "currentAmount"
-                            ),
-                        targetAmount =
-                            item.getDouble(
-                                "targetAmount"
-                            ),
-                        daysLeft =
-                            item.getInt(
-                                "daysLeft"
-                            ),
-                        colorKey =
-                            item.optInt(
-                                "colorKey",
-                                index % 4
-                            )
-                    )
-                )
-            }
-        }
-    }
-
-    /*
-     * Serialisasi daftar wallet ke JSON agar bisa disimpan di SharedPreferences.
-     */
-    private fun encodeWallets(wallets: List<Wallet>): String {
-        val array = JSONArray()
-        wallets.forEach { wallet ->
-            array.put(
-                JSONObject()
-                    .put("id", wallet.id)
-                    .put("name", wallet.name)
-                    .put("balance", wallet.balance)
-                    .put("colorKey", wallet.colorKey)
+    suspend fun ensureDefaultWalletExists(username: String): Long {
+        val existing = walletDao.observeWalletsByUser(username)
+        // Cek apakah wallet sudah ada di DB menggunakan count
+        val count = walletDao.countWalletsByUser(username)
+        if (count == 0) {
+            return walletDao.insertWallet(
+                WalletEntity(username = username, name = "Main Wallet", balance = 0.0, colorKey = 0)
             )
         }
-        return array.toString()
-    }
-
-    /*
-     * Deserialisasi daftar wallet dari JSON.
-     * Jika JSON kosong/blank, kembalikan list kosong agar caller bisa menentukan fallback wallet default.
-     */
-    private fun decodeWallets(json: String): List<Wallet> {
-        if (json.isBlank()) return emptyList()
-        val array = JSONArray(json)
-        return buildList {
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                add(
-                    Wallet(
-                        id = obj.getLong("id"),
-                        name = obj.getString("name"),
-                        balance = obj.getDouble("balance"),
-                        colorKey = obj.optInt("colorKey", 0)
-                    )
-                )
-            }
-        }
-    }
-
-    /*
-     * Menyimpan kategori custom ke JSON array string.
-     */
-    private fun encodeCustomCategories(categories: List<String>): String {
-        return JSONArray(categories).toString()
-    }
-
-    /*
-     * Membaca kategori custom dari JSON array string.
-     */
-    private fun decodeCustomCategories(json: String): List<String> {
-        if (json.isBlank()) return emptyList()
-        val array = JSONArray(json)
-        return buildList {
-            for (i in 0 until array.length()) {
-                add(array.getString(i))
-            }
-        }
-    }
-
-    /*
-     * Data SharedPreferences awal.
-     */
-    private fun demoPreferencesState(
-        onboardingCompleted: Boolean
-    ): CashNovaUiState {
-
-        return CashNovaUiState(
-            onboardingCompleted =
-                onboardingCompleted,
-            currentUser = null,
-            rememberMe = false,
-
-            profileName =
-                DEFAULT_PROFILE_NAME,
-
-            openingBalance =
-                DEFAULT_OPENING_BALANCE,
-
-            /*
-             * Transaksi dimuat dari Room.
-             */
-            transactions = emptyList(),
-
-            savings = listOf(
-                SavingGoal(
-                    id = 101L,
-                    title = "iPhone 13 Mini",
-                    currentAmount = 300.0,
-                    targetAmount = 699.0,
-                    daysLeft = 14,
-                    colorKey = 0
-                ),
-                SavingGoal(
-                    id = 102L,
-                    title = "Macbook Pro M1",
-                    currentAmount = 300.0,
-                    targetAmount = 1_499.0,
-                    daysLeft = 30,
-                    colorKey = 1
-                ),
-                SavingGoal(
-                    id = 103L,
-                    title = "Car",
-                    currentAmount = 10_000.0,
-                    targetAmount = 20_000.0,
-                    daysLeft = 30,
-                    colorKey = 2
-                ),
-                SavingGoal(
-                    id = 104L,
-                    title = "House",
-                    currentAmount = 32_500.0,
-                    targetAmount = 65_000.0,
-                    daysLeft = 1_095,
-                    colorKey = 3
-                )
-            ),
-            wallets = listOf(
-                Wallet(0L, "Main Wallet", DEFAULT_OPENING_BALANCE),
-                Wallet(1L, "Savings Account", 1000.0, 1)
-            ),
-            selectedWalletId = 0L,
-            customCategories = emptyList(),
-            themeMode = ThemeMode.SYSTEM
-        )
-    }
-
-    /*
-     * Daftar transaksi demo yang dimasukkan
-     * ke Room pada penggunaan pertama.
-     */
-    private fun demoTransactions():
-            List<FinanceTransaction> {
-
-        val now =
-            System.currentTimeMillis()
-
-        val oneDay =
-            86_400_000L
-
-        return listOf(
-            FinanceTransaction(
-                id = 1L,
-                title = "Adobe Illustrator",
-                subtitle = "Subscription fee",
-                amount = 32.0,
-                type = TransactionType.EXPENSE,
-                category = "Subscription",
-                createdAt = now,
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 2L,
-                title = "Dribbble",
-                subtitle = "Subscription fee",
-                amount = 15.0,
-                type = TransactionType.EXPENSE,
-                category = "Subscription",
-                createdAt = now - 1_000L,
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 3L,
-                title = "PayPal",
-                subtitle = "Online payment",
-                amount = 953.0,
-                type = TransactionType.EXPENSE,
-                category = "Payment",
-                createdAt = now - oneDay,
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 4L,
-                title = "Mobile Data",
-                subtitle = "Internet package",
-                amount = 1_000.0,
-                type = TransactionType.EXPENSE,
-                category = "Utility",
-                createdAt = now - (2 * oneDay),
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 5L,
-                title = "Sony Camera",
-                subtitle = "Shopping fee",
-                amount = 2_000.0,
-                type = TransactionType.EXPENSE,
-                category = "Shopping",
-                createdAt = now - (3 * oneDay),
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 6L,
-                title = "Car",
-                subtitle = "Saving",
-                amount = 5_000.0,
-                type = TransactionType.EXPENSE,
-                category = "Saving",
-                createdAt = now - (4 * oneDay),
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 7L,
-                title = "House",
-                subtitle = "Saving",
-                amount = 8_000.0,
-                type = TransactionType.EXPENSE,
-                category = "Saving",
-                createdAt = now - (5 * oneDay),
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 8L,
-                title = "Upwork",
-                subtitle = "Freelance income",
-                amount = 3_000.0,
-                type = TransactionType.INCOME,
-                category = "Freelance",
-                createdAt = now - (6 * oneDay),
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 9L,
-                title = "Freepik",
-                subtitle = "Design income",
-                amount = 3_000.0,
-                type = TransactionType.INCOME,
-                category = "Freelance",
-                createdAt = now - (7 * oneDay),
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 10L,
-                title = "Envato",
-                subtitle = "Marketplace income",
-                amount = 2_000.0,
-                type = TransactionType.INCOME,
-                category = "Freelance",
-                createdAt = now - (8 * oneDay),
-                walletId = 0L
-            ),
-            FinanceTransaction(
-                id = 11L,
-                title = "Salary",
-                subtitle = "Monthly salary",
-                amount = 12_000.0,
-                type = TransactionType.INCOME,
-                category = "Salary",
-                createdAt = now - (9 * oneDay),
-                walletId = 0L
-            )
-        )
+        return -1L
     }
 
     companion object {
-
-        private const val PREFS_NAME =
-            "cashnova_preferences"
-
-        private const val KEY_ONBOARDING =
-            "onboarding_completed"
-
-        private const val KEY_PROFILE_NAME =
-            "profile_name"
-
-        private const val KEY_OPENING_BALANCE =
-            "opening_balance"
-
-        private const val KEY_SAVINGS =
-            "savings"
-
-        private const val KEY_WALLETS = "wallets"
-        private const val KEY_SELECTED_WALLET_ID = "selected_wallet_id"
-        private const val KEY_CUSTOM_CATEGORIES = "custom_categories"
-        private const val KEY_THEME_MODE = "theme_mode"
-        private const val KEY_CURRENT_USER = "current_user"
+        private const val PREFS_NAME = "cashnova_preferences"
+        private const val KEY_ONBOARDING = "onboarding_completed"
+        private const val KEY_CURRENT_USERNAME = "current_username"
         private const val KEY_REMEMBER_ME = "remember_me"
         private const val KEY_LAST_USERNAME = "last_username"
+        private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_PROFILE_NAME = "profile_name"
 
-        /*
-         * Nama key transaksi dari repository lama.
-         * Hanya digunakan untuk migrasi satu kali.
-         */
-        private const val KEY_LEGACY_TRANSACTIONS =
-            "transactions"
-
-        private const val KEY_ROOM_INITIALIZED =
-            "room_transactions_initialized"
-
-        private const val DEFAULT_PROFILE_NAME =
-            "Asep Resing"
-
-        private const val DEFAULT_OPENING_BALANCE =
-            22_000.40
+        val DEFAULT_CATEGORIES = listOf(
+            "Salary", "Freelance", "Food", "Transport", "Shopping",
+            "Utility", "Subscription", "Payment", "Saving", "Other"
+        )
     }
 }
