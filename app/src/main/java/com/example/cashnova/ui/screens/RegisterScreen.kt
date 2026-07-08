@@ -18,8 +18,7 @@ import kotlinx.coroutines.launch
 /*
  * Layar pendaftaran pengguna (Register).
  * Mengambil input username, PIN, dan konfirmasi PIN.
- * Melakukan validasi kesamaan PIN sebelum memproses pendaftaran ke database Room.
- * Jika username sudah terdaftar, error akan ditampilkan lewat Snackbar.
+ * Setelah berhasil mendaftar, menampilkan Snackbar sukses lalu otomatis pindah ke Login.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,8 +30,23 @@ fun RegisterScreen(
     var username by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
+    var registrationDone by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    /*
+     * Setelah registrasi berhasil di ViewModel, tampilkan Snackbar sukses,
+     * lalu navigasi ke Login. LaunchedEffect memastikan ini berjalan
+     * di main thread secara urut (tunggu Snackbar selesai dulu).
+     */
+    LaunchedEffect(registrationDone) {
+        if (registrationDone) {
+            snackbarHostState.showSnackbar(
+                message = "Akun berhasil dibuat! Silakan login.",
+                duration = SnackbarDuration.Short
+            )
+            onRegisterSuccess()
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -104,17 +118,22 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            val scope = rememberCoroutineScope()
             Button(
                 onClick = {
                     if (pin != confirmPin) {
-                        // Validasi lokal: PIN tidak sama
                         scope.launch {
                             snackbarHostState.showSnackbar("PIN and Confirm PIN must match")
                         }
                     } else {
-                        // Kirim ke ViewModel yang akan mendaftarkan ke Room DB
-                        onRegisterAction(username, pin, onRegisterSuccess) { err ->
-                            scope.launch { snackbarHostState.showSnackbar(err) }
+                        onRegisterAction(
+                            username,
+                            pin,
+                            { registrationDone = true } // Set flag untuk LaunchedEffect
+                        ) { err ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(err)
+                            }
                         }
                     }
                 },

@@ -36,7 +36,7 @@ import com.example.cashnova.data.local.entity.WalletEntity
         SavingGoalEntity::class,
         CategoryEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class CashNovaDatabase : RoomDatabase() {

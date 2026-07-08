@@ -98,7 +98,13 @@ fun CashNovaApp(
 
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onRegisterSuccess = { navController.popBackStack() },
+                onRegisterSuccess = {
+                    // Arahkan ke halaman Login setelah register berhasil,
+                    // hapus Register dari back stack agar tombol Back tidak kembali ke Register.
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.REGISTER) { inclusive = true }
+                    }
+                },
                 onBack = { navController.popBackStack() },
                 onRegisterAction = viewModel::register
             )
